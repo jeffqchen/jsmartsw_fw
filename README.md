@@ -1,6 +1,6 @@
 # jsmartsw_fw
 
-This is the firmware repository for the jSmartSW firmware. Information here is limited to the software development aspect.
+This is the firmware repository for the jSmartSW firmware. Information here is limited to the aspect of software development.
 
 For functionality and day-to-day usage, please refer to the [main project repository](https://github.com/jeffqchen/jSmartSW)
 
