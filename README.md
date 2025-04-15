@@ -22,16 +22,12 @@ Arduino IDE v2.3.5
 
 Configure the Arduino IDE with the following settings:
 
-Tools ->
-`Board`: `Raspberry Pi Pico`
-
-`Port`: The corresponding port when you plug in the Pi Pico into your computer
-
-`Flash Size`: `2MB (no FS)`
-
-`Upload Method`: `Default (UF2)` (If you are connecting the Pi Pico to your computer via a USB cable.)
-
-`USB Stack`: `Adafruit TinyUSB Host (native)`
+`Tools` ->
+- `Board`: `Raspberry Pi Pico`
+- `Port`: The corresponding port when you plug in the Pi Pico into your computer
+- `Flash Size`: `2MB (no FS)`
+- `Upload Method`: `Default (UF2)` (If you are connecting the Pi Pico to your computer via a USB cable.)
+- `USB Stack`: `Adafruit TinyUSB Host (native)`
 
 ## How To Upload
 
