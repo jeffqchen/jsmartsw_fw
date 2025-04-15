@@ -14,9 +14,9 @@ Arduino IDE v2.3.5
 
 ## Libraries Used
 
-- [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
-- [FastLED](https://github.com/FastLED/FastLED)
-- [TinyUSB](https://github.com/hathach/tinyusb)
+- [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306) v2.5.13
+- [FastLED](https://github.com/FastLED/FastLED) v3.9.15
+- [TinyUSB](https://github.com/hathach/tinyusb) v3.4.4
 
 ## How To Build
 
