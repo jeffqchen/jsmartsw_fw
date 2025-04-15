@@ -33,4 +33,4 @@ Configure the Arduino IDE with the following settings:
 
 Hold the `BOOTSEL` button on the Pi Pico and then plug it into the computer.
 
-Then choose the new port that appears in the `Tools` -> `Port menu`. Then click the `Upload` button.
+Then choose the new port that appears in the `Tools` -> `Port` menu. Then click the `Upload` button.
