@@ -13,10 +13,10 @@ Raspberry Pi Pico
 Arduino IDE v2.3.5
 
 ## Libraries Used
-
-- [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306)
-- [FastLED](https://github.com/FastLED/FastLED)
-- [TinyUSB](https://github.com/hathach/tinyusb)
+- rp2040@4.5.1
+- [Adafruit_SSD1306](https://github.com/adafruit/Adafruit_SSD1306) v2.5.13
+- [FastLED](https://github.com/FastLED/FastLED) v3.9.15
+- [TinyUSB](https://github.com/hathach/tinyusb) v3.4.4
 
 ## How To Build
 
@@ -33,4 +33,4 @@ Configure the Arduino IDE with the following settings:
 
 Hold the `BOOTSEL` button on the Pi Pico and then plug it into the computer.
 
-Then choose the new port that appears in the `Tools` -> `Port menu`. Then click the `Upload` button.
+Then choose the new port that appears in the `Tools` -> `Port` menu. Then click the `Upload` button.
