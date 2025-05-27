@@ -2,6 +2,7 @@
 #include "controller_sony_ds4.h"
 #include "controller_sony_dualsense.h"
 #include "controller_sega_saturn_usb.h"
+#include "controller_nintendo_joycon.h"
 #include "controller_nintendo_switch_pro.h"
 #include "controller_psx2usb.h"
 #include "controller_md2x.h"
@@ -19,6 +20,7 @@ enum {
   API_ID_DUALSHOCK3,
   API_ID_DUALSHOCK4,
   API_ID_DUALSENSE,
+  API_ID_SWJOYCON,
   API_ID_SWITCHPRO,
   API_ID_SATURN_USB,
   API_ID_PSX2USB,

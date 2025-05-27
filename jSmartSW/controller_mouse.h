@@ -27,6 +27,9 @@ typedef struct TU_ATTR_PACKED
   uint8_t wheel;
 } mouse_input_report_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 #define MOUSE_BUTTON_NONE 0x00
 #define MOUSE_BUTTON_L    0x01
 #define MOUSE_BUTTON_R    0x02
@@ -47,6 +50,7 @@ typedef struct TU_ATTR_PACKED
 
 #define MOUSE_BUTTON_DEBOUNCE_TIME  50
 #define MOUSE_TIMEOUT_THRESHOLD     100 //ms
+
 #endif
 
 //function prototype

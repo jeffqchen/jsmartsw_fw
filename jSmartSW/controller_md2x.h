@@ -39,6 +39,9 @@ typedef struct TU_ATTR_PACKED
   uint8_t dpad_upDown;
 } md2x_report_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 typedef struct
 {
   uint8_t instance;

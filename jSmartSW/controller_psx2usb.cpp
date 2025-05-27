@@ -36,8 +36,7 @@ bool psx2usb_is_hardware(uint8_t dev_addr)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-  return ( (vid == 0x1b4f && pid == 0x9204)
-         );
+  return ( (vid == 0x1b4f && pid == 0x9204) );
 }
 
 bool psx2usb_is_registeredInstance(uint8_t dev_addr, uint8_t instance)

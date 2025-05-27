@@ -77,15 +77,23 @@ static bool rt4k_scart = false;
 void rgbLed_init()
 {
   //retrieve saved color scheme selection and brightness settings from saved data
-  rgbledColorSchemeIndex = pico_getLedColorSchemeFromSavedata(); 
-
+  rgbledColorSchemeIndex = pico_getLedColorSchemeFromSavedata();
   rgbLedBrightnessIndex = pico_getLedBrightnessFromSavedata();
+  #ifdef RGBLED_DBG
+    debugPort->println("[RGB LED] Retrieved saved brightness: " + String(rgbLedBrightnessData[rgbLedBrightnessIndex].brightnessValue));
+  #endif
+
   rgbLedBrightnessIndexStore = rgbLedBrightnessIndex;
   rgbLedTargetBrightness = rgbLedBrightnessData[rgbLedBrightnessIndex].brightnessValue;
   rgbLedCurrentBrightness = rgbLedTargetBrightness;
 
-  //Initialize NeoPixel stripe object
+  //Initialize NeoPixel stripe hardware
   FastLED.addLeds<RGBLED_TYPE,RGBLED_DATA_PIN,COLOR_ORDER>(rgbLeds, NUM_LEDS).setCorrection(UncorrectedColor);
+  #ifdef RGBLED_POWER_LIMIT
+    FastLED.setMaxPowerInVoltsAndMilliamps(RGBLED_POWER_VOLT, RGBLED_POWER_AMP);
+  #endif
+
+  //Set initial brightness
   FastLED.setBrightness(rgbLedTargetBrightness); // Must initialize with target brightness
   FastLED.setCorrection(rgbLedBrightnessData[rgbLedBrightnessIndex].correctionValue); // Shining through PCB FR4 changes the color by a lot and this requires color correction.
 }
@@ -564,7 +572,7 @@ void rgbLed_flashStuckButtons(int * buttonReading, int timesToBlink)
   badButtonColor.value = 250;
 
   for (int i = 0; i < timesToBlink; i++)
-  {    
+  {
     routine_blinkLed();
 
     for (int j = 0; j < BUTTON_COUNT; j++)
@@ -580,7 +588,7 @@ void rgbLed_flashStuckButtons(int * buttonReading, int timesToBlink)
     FastLED.show();
 
     //Feed the dog while showing error
-    watchdog_update();
+    //watchdog_update();
     delay(200);
   }
 }

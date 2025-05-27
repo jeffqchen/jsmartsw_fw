@@ -172,6 +172,9 @@ typedef struct TU_ATTR_PACKED {
   uint8_t led_tpad_color_blue;
 } sony_dualSense_output_report_02_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 #endif
 
 //function prototypes

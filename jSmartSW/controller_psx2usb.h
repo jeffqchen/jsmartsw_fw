@@ -52,6 +52,9 @@ typedef struct TU_ATTR_PACKED
   uint16_t axis_y;
 } psx2usb_report_03_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 #endif
 
 //bool is_psx2usb(uint8_t);

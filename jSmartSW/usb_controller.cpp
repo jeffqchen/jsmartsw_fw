@@ -42,8 +42,7 @@ void controller_holdLeftRightRumbleTick(holding_left_right holdState, uint8_t de
   //////////////////////////////////////////////////////////////////////////
   // Tacktile rumble when tick is reset to 0
   if (0 == controllerHoldTick)
-  {
-    
+  {    
     #ifdef CONTROLLER_DBG
       debugPort->println("[Tick] Trigger!");
     #endif
@@ -127,35 +126,45 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     // Display content of received HID reports
     String debugString;
     uint16_t displayBytes = len;
-    
-    for (int i = 0; i < displayBytes; i++)
+
+    #ifdef REPORT_FILTERING
+      if (NO_SWITCH_INPUT_REPORT
+          NO_DS3_REPORT
+         )  
+    #endif 
+    #ifdef NO_REPORT_FILTERING
+      if (true)
+    #endif
     {
-      if (0 == i % 16)
+      for (int i = 0; i < displayBytes; i++)
       {
-        debugString += "[";
-        if (i < 0x10 )
+        if (0 == i % 16)
+        {
+          debugString += "[";
+          if (i < 0x10 )
+          {
+            debugString += "0";
+          }
+          debugString += String(i) + "] ";
+        }
+
+        if (report[i] < 0x10)
         {
           debugString += "0";
         }
-        debugString += String(i) + "] ";
-      }
+        debugString += String(report[i], HEX) + " ";
 
-      if (report[i] < 0x10)
-      {
-        debugString += "0";
-      }
-      debugString += String(report[i], HEX) + " ";
-
-      if (0 == (i + 1) % 64)
-      {
-        debugString += "[" + String(i) + "]";
-        if (i + 1 < displayBytes)
+        if (0 == (i + 1) % 64)
         {
-          debugString += "\n";
+          debugString += "[" + String(i) + "]";
+          if (i + 1 < displayBytes)
+          {
+            debugString += "\n";
+          }
         }
       }
-    }
-    debugPort->println(debugString);
+      debugPort->println(debugString);
+    }    
   #endif
 
   immediateControllerData = game_controller_data();

@@ -70,6 +70,9 @@ typedef struct TU_ATTR_PACKED{
   uint8_t duty_on;
 } ds3_led_parameters;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 typedef struct {
   unsigned int maskValue;
   int stepSign;

@@ -18,7 +18,7 @@ typedef enum
 
 #define RUMBLE_TICK_DURATION 1000
 #define TICK_EVERY_TIMES 10
-#define RUMBLE_TICK_ADJUST_VALUE 0
+#define RUMBLE_TICK_ADJUST_VALUE 1
 
 enum {
   CONTROLLER_NONE = 0,
@@ -28,6 +28,7 @@ enum {
   CONTROLLER_DUALSHOCK3,
   CONTROLLER_DUALSHOCK4,
   CONTROLLER_DUALSENSE,
+  CONTROLLER_SWITCHJOYCON,
   CONTROLLER_SWITCHPRO,
   CONTROLLER_8BITDO_M30,
   CONTROLLER_SATURN_USB,
@@ -69,7 +70,7 @@ typedef struct _game_controller_data {
   bool button_touchPadButton;
 
   bool hasActivity;
-  //unsigned int controllerType;
+  
   uint8_t dev_addr;
   uint8_t instance;
 

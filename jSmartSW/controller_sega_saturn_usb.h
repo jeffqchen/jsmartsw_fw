@@ -35,6 +35,9 @@ typedef struct TU_ATTR_PACKED
   uint8_t button_start;
 } saturn_usb_report_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
 #define SATURN_USB_DPAD_NEUTRAL 0x80
 
 #endif

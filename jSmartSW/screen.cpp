@@ -36,7 +36,7 @@
   };
 #endif
 
-static unsigned int  screenOrientation = SCREEN_ROTATION;
+static unsigned int  screenOrientation;
 static unsigned long bootTime = 0;
 
 //static unsigned long lastScreenRefresh = 0;
@@ -106,8 +106,11 @@ static int setupMode_transitionPanel_posX = SETUPMODE_TRANSITION_PANEL_POSITION_
 //////////// END OF FUNCTION PROTOTYPES ////////////
 
 void screen_init()
-{ //Initialize display
-
+{
+  inputNumberCustomizationData = pico_getIconCustomizationDataPointer();
+  screenOrientation = pico_getScreenOrientation();
+  
+  //Initialize display
   bufferA.setRotation(screenOrientation);
   bufferA.ssd1306_command(SSD1306_SETCONTRAST);
   bufferA.ssd1306_command(0xff);
@@ -122,10 +125,8 @@ void screen_init()
     buffers[0] = &bufferA;
     buffers[1] = &bufferB;
   */
+  
   display = &bufferA;
-
-  inputNumberCustomizationData = pico_getIconCustomizationDataPointer();
-  //inputNumberCustomizationData = &(mainSaveData.inputIconCustomizationData[0]);
 }
 
 void routine_screenUpdate()
@@ -1171,6 +1172,7 @@ static void setupMode_screenComponent_toolTip()
 
     //Nintendo Family
     case CONTROLLER_SWITCHPRO:
+    case CONTROLLER_SWITCHJOYCON:
       buttonYes = "A";
       buttonNo  = "B";
       buttonClr = "X";
@@ -1367,4 +1369,12 @@ static void transitionReset()
 bool screen_isThereActivity()
 {
   return screenImportantActivity;
+}
+
+void screen_flip(unsigned int newOrientation)
+{
+  screenOrientation = newOrientation;
+
+  bufferA.setRotation(screenOrientation);
+  bufferA.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS);
 }

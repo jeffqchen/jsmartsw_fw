@@ -9,47 +9,9 @@
 ///////////////////////////////
 //Controller reports definition
 ///////////////////////////////
+
 TU_ATTR_PACKED_BEGIN
 TU_ATTR_BIT_FIELD_ORDER_BEGIN
-
-enum {
-  SONY_DS4_1 = 0,
-  SONY_DS4_2,
-  SONY_DS4_WIRELESS_ADAPTER,
-  HORI_FC4,
-  HORI_PS4_MINI,
-  ASW_GG_XRD,
-  DS4_END
-};
-
-#define NUM_OF_DS4_DEVICES  DS4_END
-
-#define DS4_SONY_VID                0x054C
-  #define DS4_SONY_DS4_1            0x05C4
-  #define DS4_SONY_DS4_2            0x09CC
-  #define DS4_SONY_ADAPTER_PID      0x0BA0
-
-#define DS4_HORI_VID                0x0F0D
-  #define DS4_HORI_FC4_PID          0x005E
-  #define DS4_HORI_PS4_MINI_PID     0x00EE
-
-#define DS4_ASW_VID                 0x1F4F
-  #define DS4_ASW_GG_XRD_PID        0x1002
-
-#define DS4_VID_PID_ARRAY           { {DS4_SONY_VID, DS4_SONY_DS4_1},            \
-                                      {DS4_SONY_VID, DS4_SONY_DS4_2},            \
-                                      {DS4_SONY_VID, DS4_SONY_ADAPTER_PID}, \
-                                      {DS4_HORI_VID, DS4_HORI_FC4_PID},         \
-                                      {DS4_HORI_VID, DS4_HORI_PS4_MINI_PID},    \
-                                      {DS4_ASW_VID , DS4_ASW_GG_XRD_PID}        }
-
-typedef struct
-{
-  uint16_t vid;
-  uint16_t pid;
-} device_id_entry;
-
-#define DS4_OUTPUT_REPORT_5 0x5
 
 typedef struct TU_ATTR_PACKED
 {
@@ -124,11 +86,54 @@ typedef struct TU_ATTR_PACKED {
   uint8_t other[9];
 } sony_ds4_output_report_5_t;
 
+TU_ATTR_PACKED_END
+TU_ATTR_BIT_FIELD_ORDER_END
+
+enum {
+  SONY_DS4_1 = 0,
+  SONY_DS4_2,
+  SONY_DS4_WIRELESS_ADAPTER,
+  HORI_FC4,
+  HORI_PS4_MINI,
+  ASW_GG_XRD,
+  DS4_END
+};
+
+#define NUM_OF_DS4_DEVICES  DS4_END
+
+#define DS4_SONY_VID                0x054C
+  #define DS4_SONY_DS4_1            0x05C4
+  #define DS4_SONY_DS4_2            0x09CC
+  #define DS4_SONY_ADAPTER_PID      0x0BA0
+
+#define DS4_HORI_VID                0x0F0D
+  #define DS4_HORI_FC4_PID          0x005E
+  #define DS4_HORI_PS4_MINI_PID     0x00EE
+
+#define DS4_ASW_VID                 0x1F4F
+  #define DS4_ASW_GG_XRD_PID        0x1002
+
+#define DS4_VID_PID_ARRAY           { {DS4_SONY_VID, DS4_SONY_DS4_1},           \
+                                      {DS4_SONY_VID, DS4_SONY_DS4_2},           \
+                                      {DS4_SONY_VID, DS4_SONY_ADAPTER_PID},     \
+                                      {DS4_HORI_VID, DS4_HORI_FC4_PID},         \
+                                      {DS4_HORI_VID, DS4_HORI_PS4_MINI_PID},    \
+                                      {DS4_ASW_VID , DS4_ASW_GG_XRD_PID}        }
+
+typedef struct
+{
+  uint16_t vid;
+  uint16_t pid;
+} device_id_entry;
+
+#define DS4_OUTPUT_REPORT_5 0x5
+
 typedef struct {
   int red;
   int green;
   int blue;
 } ds4_light_bar_color;
+
 #define DS4_LIGHT_BAR_RGB_MIN       0
 #define DS4_LIGHT_BAR_RGB_MAX       255
 #define DS4_LIGHT_BAR_DEFAULT       {10,  25, 160}

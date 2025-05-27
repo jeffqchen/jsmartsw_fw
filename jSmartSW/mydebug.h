@@ -36,12 +36,35 @@
   //#define SCREEN_DBG
 
   //#define CONTROLLER_REPORT_DBG
-  //#define CONTROLLER_DBG
-  #ifdef  CONTROLLER_DBG
+  #ifdef CONTROLLER_REPORT_DBG
+    #define REPORT_FILTERING
+    #ifdef REPORT_FILTERING
+
+    #define NO_SWITCH_INPUT_REPORT  (0x21 != report[0])
+    #ifndef NO_SWITCH_INPUT_REPORT
+      #define NO_SWITCH_INPUT_REPORT  true
+    #endif
+
+    #define NO_DS3_REPORT           && (0x01 != report[0])
+    #ifndef NO_DS3_REPORT
+      #define NO_DS3_REPORT           && true
+    #endif
+    
+    #else
+      #define NO_REPORT_FILTERING
+    #endif
+  #endif
+
+  #define CONTROLLER_DBG
+  #ifdef CONTROLLER_DBG
     //#define DS3_DBG
     //#define DS4_DBG
     //#define DS5_DBG
-    //#define SWITCHPRO_DBG
+
+    //#define SWITCHLIB_DBG
+    #define SWITCHJOYCON_DBG
+    //#define SWITCHPRO_DBG    
+
     //#define SATURNUSB_DBG
     //#define KEYBOARD_DBG
     //#define MOUSE_DBG

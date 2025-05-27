@@ -193,6 +193,7 @@ void routine_screenUpdate();      //Loop routine for updating screen
 
 //external functions
 bool screen_isThereActivity();
+void screen_flip(unsigned int);
 
 ////various parts of gfx
 void screen_setCommandTextUpdate(String, unsigned long);

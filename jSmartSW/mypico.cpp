@@ -118,6 +118,14 @@ static bool setupMode_initialEnter = true;
   static bool isThereHardwareActivity();
 
   ////////////////////////////////////////
+  // Various functions
+  ////////////////////////////////////////
+
+  void flipScreen();
+  void cycleRgbLedColorScheme();
+  void cycleRgbLedBrightness();
+
+  ////////////////////////////////////////
   // Savedata Related
   ////////////////////////////////////////
 
@@ -204,7 +212,7 @@ void jsmartsw_core2Setup()
   #endif
 
   controller_init_deviceRegister();
-  usbHost_init();  
+  usbHost_init();
 
   core2SetupFinish = true;
 }
@@ -542,7 +550,7 @@ static void routine_keypad()
           switch (previousKeypadData.reading)
           {
             #ifdef GSCARTSW_VER_5_2
-              // ------------ button combination cases
+              ////////////////// General user button combination functions //////////////////
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_2_WAKE:     //1+2 = Toggle RT4K Power
                 rt4k_cmdPowerToggle();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_2 + 1], 0);
@@ -566,19 +574,20 @@ static void routine_keypad()
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_6 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_7_DIMMER:  //button 1+7 = Cycle LED brightness
-                mainSaveData.rgbled_brightnessIndex = rgbLed_cycleBrightness();
-                pico_setSaveDataDirty();
-                screen_setCommandTextUpdate(commandText[PHY_BUTTON_7 + 1], 0);
+                cycleRgbLedBrightness();
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_8_AUTO:    //button 1+8 = back to AUTO mode
                 gswMode_changeToAuto();
                 break;
+              ////////////////// More hidden functions //////////////////
               case KEYPAD_VALUE_4_1080P|KEYPAD_VALUE_5_HD15:    // Cycle color scheme
-                mainSaveData.rgbled_colorScheme = rgbled_cycleColorScheme();
-                pico_setSaveDataDirty();
+                cycleRgbLedColorScheme();
                 break;
               case KEYPAD_VALUE_6_SCART|KEYPAD_VALUE_8_AUTO:    // Force saving
                 pico_setSaveDataDirty();
+                break;
+              case KEYPAD_VALUE_3_4K|KEYPAD_VALUE_6_SCART:    // Flip screen
+                flipScreen();
                 break;
               case KEYPAD_VALUE_2_WAKE|KEYPAD_VALUE_7_DIMMER:   //button 2+7 = system reset
                 pico_mcuReboot();
@@ -637,14 +646,14 @@ static void routine_keypad()
               screen_setCommandTextUpdate(commandText[6], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_7_DIMMER:    //button 1+7 = Cycle LED brightness
-              rgbLed_cycleBrightness();
-              screen_setCommandTextUpdate(commandText[7], 0);
+              cycleRgbLedBrightness();
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_8_AUTO:   //button 1+8 = back to AUTO mode
               gswMode_changeToAuto();
               break;
             case KEYPAD_VALUE_2_WAKE|KEYPAD_VALUE_7_DIMMER:    //button 2+7 = system reset
               pico_mcuReboot();
+              break;
           #endif
         }
         //leave a mark so single button action can't be triggered after releasing SHIFT
@@ -787,19 +796,23 @@ static void routine_controller()
         currentControllerData.dpad_down     ||
         currentControllerData.dpad_right    ||
         currentControllerData.dpad_left     ||
+
         currentControllerData.apad_north    ||
         currentControllerData.apad_west     ||
         currentControllerData.apad_south    ||
         currentControllerData.apad_east     ||
+
         currentControllerData.button_select ||
         currentControllerData.button_start  ||
         currentControllerData.button_home   ||
+
         currentControllerData.button_l1     ||
         currentControllerData.button_r1     ||
         currentControllerData.button_l2     ||
         currentControllerData.button_r2     ||
         currentControllerData.button_l3     ||
         currentControllerData.button_r3     ||
+        
         currentControllerData.button_touchPadButton
       )
   {
@@ -842,6 +855,7 @@ static void routine_controller()
 
       if (currentControllerData.button_l3) {gswMode_changeToAuto();}
       #ifndef DEBUG
+      
       if (currentControllerData.button_r3)
       {
         if (NO_INPUT != currentInput)
@@ -850,6 +864,7 @@ static void routine_controller()
           enterSetupMode();
         }
       }
+
       #else
         if (currentControllerData.button_r3) {pico_setSaveDataDirty();}
       #endif
@@ -1394,7 +1409,7 @@ static void readSaveDataFromFlash()
   #endif
 
   //flash content check failed
-  if(saveDataVerificationFailed())
+  if(true == saveDataVerificationFailed())
   {
     #ifdef FLASH_DBG
       debugPort->println("[FLS] Magic word mismatch!");
@@ -1449,6 +1464,11 @@ input_number_spec* pico_getIconCustomizationDataPointer()
   return &(mainSaveData.inputIconCustomizationData[0]);
 }
 
+unsigned int pico_getScreenOrientation()
+{
+  return mainSaveData.screen_rotation;
+}
+
 void pico_setSaveDataDirty()
 {
   #ifdef FLASH_DBG
@@ -1466,6 +1486,7 @@ void pico_saveDataReset()
   //fill default values to input customization data array
   mainSaveData.rgbled_colorScheme = RGBLED_COLOR_SCHEME_DEFAULT;
   mainSaveData.rgbled_brightnessIndex = RGBLED_BRIGHTNESS_LV_DEFAULT;
+  mainSaveData.screen_rotation = SCREEN_ROTATION_DEFAULT;
 
   for (int i = 0; i< INPUT_END; i++)
   {
@@ -1545,6 +1566,7 @@ static void routine_writeSaveDataToFlash()
     rp2040.resumeOtherCore();
 
     saveDataDirty = false;
+    screen_setCommandTextUpdate("SAVED", SETUPMODE_MESSAGE_DISPLAY_DURATION);
   }
 }
 
@@ -1675,4 +1697,30 @@ static void keypadBootCheck()
     }
     pico_mcuReboot();
   }
+}
+
+void flipScreen()
+{
+  if (SCREEN_ROTATION_DEFAULT == mainSaveData.screen_rotation)
+  {
+    mainSaveData.screen_rotation = SCREEN_ROTATION_FLIP;
+  } else {
+    mainSaveData.screen_rotation = SCREEN_ROTATION_DEFAULT;
+  }
+  pico_setSaveDataDirty();
+
+  screen_flip(mainSaveData.screen_rotation);
+}
+
+void cycleRgbLedBrightness()
+{
+    mainSaveData.rgbled_brightnessIndex = rgbLed_cycleBrightness();
+    screen_setCommandTextUpdate(commandText[PHY_BUTTON_7 + 1], 0);
+    pico_setSaveDataDirty();
+}
+
+void cycleRgbLedColorScheme()
+{
+  mainSaveData.rgbled_colorScheme = rgbled_cycleColorScheme();
+  pico_setSaveDataDirty();
 }

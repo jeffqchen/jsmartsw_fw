@@ -81,12 +81,19 @@
 
   #define SCREEN_WIDTH            SCREEN_HEIGHT_PHYSICAL  //Swap height and width due to vertical ussage  
   #define SCREEN_HEIGHT           SCREEN_WIDTH_PHYSICAL
-  #define SCREEN_ROTATION         1   ////clockwise, 1 = 90º, 3 = 270º
+  #define SCREEN_ROTATION_DEFAULT   1   ////clockwise, 1 = 90º, 3 = 270º
+  #define SCREEN_ROTATION_FLIP      3   //Flipped
 
   ////////////////////////////////////////////////////////
   // RGB LEDs
   ////////////////////////////////////////////////////////
   #define RGBLED_DATA_PIN  (pin_size_t)9
+
+  #define RGBLED_POWER_LIMIT
+  #ifdef RGBLED_POWER_LIMIT
+    #define RGBLED_POWER_VOLT   5
+    #define RGBLED_POWER_AMP    300
+  #endif
 
   enum {
     RGBLED_INPUT_1  = 0,

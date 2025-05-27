@@ -54,7 +54,7 @@ void rt4k_uartInit()
     debugPort->println("\n=[ jSmartSW ]=");
     debugPort->flush();
 
-    if ( watchdog_enable_caused_reboot())
+    if (watchdog_enable_caused_reboot())
     {
       debugPort->println("[JSW] Last restarted by Watchdog_Enable");
       debugPort->flush();
@@ -72,7 +72,7 @@ void rt4k_uartInit()
 
   //HD15 serial
   Serial1.begin(RT4K_HD15_UART_BAUD_RATE, RT4K_HD15_UART_CONFIG);
-  Serial1.println("ver");
+  Serial1.println("RT4K_UART_COMMAND_ECHO_VERSION");
   hd15Uart = &Serial1;
 
   rt4k_notifyUsbcDisonnected();

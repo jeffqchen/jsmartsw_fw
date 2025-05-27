@@ -18,18 +18,15 @@
 
 #define SETUPMODE_AUTO_QUIT_WAIT  10000
 
-//pico input selection mode
-enum
-{
-  PICO_MODE_AUTO    = true,
-  PICO_MODE_MANUAL  = false
-};
+//pico & gsw input selection mode
+#define GSW_MODE_AUTO     true
+#define GSW_MODE_MANUAL   false
 
 #define PICO_WATCH_DOG_TIMEOUT 2000
 
 #define PICO_SAVEDATA_ADDR  0x3FC00 // end of 2MB minus 4KB
 #define PICO_SAVEDATA_MAGICWORD   "JSMARTSW"
-#define PICO_SAVEDATA_VERSION     "20250401"
+#define PICO_SAVEDATA_VERSION     "20250413"
 
 //jSmartSW Running Modes
 enum
@@ -40,13 +37,6 @@ enum
   JSMARTSW_ENTERING_SETUP_MODE,
   JSMARTSW_SETUP_MODE,
   JSMARTSW_EXITING_SETUP_MODE
-};
-
-//gsw mode
-enum
-{
-  GSW_MODE_MANUAL = 0,
-  GSW_MODE_AUTO  
 };
 
 //pico power state
@@ -71,6 +61,7 @@ typedef struct {
   input_number_spec inputIconCustomizationData[INPUT_END];
   unsigned int rgbled_colorScheme;
   unsigned int rgbled_brightnessIndex;
+  unsigned int screen_rotation;
 } jsmartsw_savedata;
 
 //button reading
@@ -148,6 +139,7 @@ unsigned int pico_getPowerState();
 
 unsigned int pico_getLedColorSchemeFromSavedata();
 unsigned int pico_getLedBrightnessFromSavedata();
+unsigned int pico_getScreenOrientation();
 input_number_spec * pico_getIconCustomizationDataPointer();
 void pico_setSaveDataDirty();
 void pico_saveDataReset();

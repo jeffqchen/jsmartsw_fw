@@ -277,70 +277,82 @@ bool ds3_has_activity()
 
 void ds3_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  memcpy (&ds3_output_report, &ds3OutputReportTemplate, sizeof(sony_ds3_output_report_01_t));
-  ds3_output_report.led_bitmap = DS3_LED_1_ON|DS3_LED_2_ON|DS3_LED_3_ON|DS3_LED_4_ON;
+  if ( ds3_is_hardware(dev_addr) )
+  {
+    memcpy (&ds3_output_report, &ds3OutputReportTemplate, sizeof(sony_ds3_output_report_01_t));
+    ds3_output_report.led_bitmap = DS3_LED_1_ON|DS3_LED_2_ON|DS3_LED_3_ON|DS3_LED_4_ON;
+  }
 }
 
 void ds3_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  for (int i = 0; i < DS3_NUM_LEDS; i++)
+  if ( ds3_is_hardware(dev_addr) )
   {
-    if (ds3LedMask[holdState][i].maskValue + ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP < DS3_LED_DUTY_MIN + DS3_LED_ANIMATION_STEP)
+    for (int i = 0; i < DS3_NUM_LEDS; i++)
     {
-      ds3LedMask[holdState][i].maskValue = DS3_LED_DUTY_MIN;
-      ds3LedMask[holdState][i].stepSign *= -1;
-    } else if (ds3LedMask[holdState][i].maskValue + ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP > DS3_LED_DUTY_MAX - DS3_LED_ANIMATION_STEP)
-    {
-      ds3LedMask[holdState][i].maskValue = DS3_LED_DUTY_MAX;
-      ds3LedMask[holdState][i].stepSign *= -1;
-    } else {
-      ds3LedMask[holdState][i].maskValue += ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP;
-    }
+      if (ds3LedMask[holdState][i].maskValue + ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP < DS3_LED_DUTY_MIN + DS3_LED_ANIMATION_STEP)
+      {
+        ds3LedMask[holdState][i].maskValue = DS3_LED_DUTY_MIN;
+        ds3LedMask[holdState][i].stepSign *= -1;
+      } else if (ds3LedMask[holdState][i].maskValue + ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP > DS3_LED_DUTY_MAX - DS3_LED_ANIMATION_STEP)
+      {
+        ds3LedMask[holdState][i].maskValue = DS3_LED_DUTY_MAX;
+        ds3LedMask[holdState][i].stepSign *= -1;
+      } else {
+        ds3LedMask[holdState][i].maskValue += ds3LedMask[holdState][i].stepSign * DS3_LED_ANIMATION_STEP;
+      }
 
-    ds3_output_report.led_parameter[i].time_enabled = DS3_LED_TIME_ENABLED;
-    ds3_output_report.led_parameter[i].duty_length = DS3_LED_DUTY_LENGTH;
-    ds3_output_report.led_parameter[i].enabled = 1;
-    ds3_output_report.led_parameter[i].duty_off = ds3LedMask[holdState][i].maskValue;
-    ds3_output_report.led_parameter[i].duty_on = DS3_LED_DUTY_MAX - ds3LedMask[holdState][i].maskValue;
+      ds3_output_report.led_parameter[i].time_enabled = DS3_LED_TIME_ENABLED;
+      ds3_output_report.led_parameter[i].duty_length = DS3_LED_DUTY_LENGTH;
+      ds3_output_report.led_parameter[i].enabled = 1;
+      ds3_output_report.led_parameter[i].duty_off = ds3LedMask[holdState][i].maskValue;
+      ds3_output_report.led_parameter[i].duty_on = DS3_LED_DUTY_MAX - ds3LedMask[holdState][i].maskValue;
+    }
   }
 }
 
 void ds3_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  #ifdef DS3_DBG
-    debugPort->println("[DS3] Rumble!");
-  #endif
-
-  rumbleStartTime = millis();
-
-  if (HOLDING_RIGHT == holdState)
+  if ( ds3_is_hardware(dev_addr) )
   {
-    ds3_output_report.small_motor_duration = 0xff;
-    ds3_output_report.small_motor_strength = 0xff;
-    ds3_output_report.large_motor_duration = 0x0;
-    ds3_output_report.large_motor_strength = 0x0;
-  }
+    #ifdef DS3_DBG
+      debugPort->println("[DS3] Rumble!");
+    #endif
 
-  if (HOLDING_LEFT == holdState)
-  {
-    ds3_output_report.small_motor_duration = 0x0;
-    ds3_output_report.small_motor_strength = 0x0;
-    ds3_output_report.large_motor_duration = 0xff;
-    ds3_output_report.large_motor_strength = 0xff;
+    rumbleStartTime = millis();
+
+    if (HOLDING_RIGHT == holdState)
+    {
+      ds3_output_report.small_motor_duration = 0xff;
+      ds3_output_report.small_motor_strength = 0xff;
+      ds3_output_report.large_motor_duration = 0x0;
+      ds3_output_report.large_motor_strength = 0x0;
+    }
+
+    if (HOLDING_LEFT == holdState)
+    {
+      ds3_output_report.small_motor_duration = 0x0;
+      ds3_output_report.small_motor_strength = 0x0;
+      ds3_output_report.large_motor_duration = 0xff;
+      ds3_output_report.large_motor_strength = 0xff;
+    }
   }
 }
 
 void ds3_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  if (millis() - rumbleStartTime > 100 || false == deviceActivity)
+  if ( ds3_is_hardware(dev_addr) )
   {
-    #ifdef DS3_DBG
-      debugPort->println("[DS3] Rumble Stop!");
-    #endif
+    if (millis() - rumbleStartTime > 100 || false == deviceActivity)
+    {
+      #ifdef DS3_DBG
+        debugPort->println("[DS3] Rumble Stop!");
+      #endif
 
-    ds3_output_report.small_motor_duration = 0;
-    ds3_output_report.small_motor_strength = 0;
-    ds3_output_report.large_motor_duration = 0;
-    ds3_output_report.large_motor_strength = 0;
+      ds3_output_report.small_motor_duration = 0;
+      ds3_output_report.small_motor_strength = 0;
+      ds3_output_report.large_motor_duration = 0;
+      ds3_output_report.large_motor_strength = 0;
+    }
   }
 }

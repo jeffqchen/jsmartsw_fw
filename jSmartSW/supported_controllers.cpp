@@ -14,6 +14,7 @@ extern controller_api_interface mouse_api;
 extern controller_api_interface sony_ds3_api;
 extern controller_api_interface sony_ds4_api;
 extern controller_api_interface sony_dualSense_api;
+extern controller_api_interface switchJoyCon_api;
 extern controller_api_interface switchProCon_api;
 extern controller_api_interface saturn_usb_api;
 extern controller_api_interface psx2usb_api;
@@ -48,7 +49,10 @@ void controller_init_deviceRegister()
   controllerEntity[API_ID_DUALSHOCK3] = &sony_ds3_api;
   controllerEntity[API_ID_DUALSHOCK4] = &sony_ds4_api;
   controllerEntity[API_ID_DUALSENSE]  = &sony_dualSense_api;
+
+  controllerEntity[API_ID_SWJOYCON]   = &switchJoyCon_api;
   controllerEntity[API_ID_SWITCHPRO]  = &switchProCon_api;
+  
   controllerEntity[API_ID_SATURN_USB] = &saturn_usb_api;
   controllerEntity[API_ID_PSX2USB]    = &psx2usb_api;
   controllerEntity[API_ID_MD2X]       = &md2x_api;

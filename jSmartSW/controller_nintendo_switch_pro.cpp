@@ -12,6 +12,7 @@
 #include <Arduino.h>
 
 #include "mypico.h"
+#include "nintendo_switch_controller.h"
 #include "controller_nintendo_switch_pro.h"
 #include "usb_controller.h"
 #include "supported_controllers.h"
@@ -38,12 +39,12 @@ static unsigned long switchProCon_lastResetTiming = 0;
 static bool switchProConIsActually8bitdo = false;
 
 static const uint8_t* switchProCon_homeLedData;
-static const uint8_t defaultHomeLedData  [SWPROCON_HOME_LED_DATA_SIZE] = SWPROCON_HOME_LED_DATA_DEFAULT;
-static const uint8_t fastBlinkHomeLedData[SWPROCON_HOME_LED_DATA_SIZE] = SWPROCON_HOME_LED_DATA_FAST;
+static const uint8_t defaultHomeLedData  [SWITCH_HOME_LED_DATA_SIZE] = SWITCH_HOME_LED_DATA_DEFAULT;
+static const uint8_t fastBlinkHomeLedData[SWITCH_HOME_LED_DATA_SIZE] = SWITCH_HOME_LED_DATA_FAST;
 
 static const uint8_t* switchProCon_rumbleData;
-static const uint8_t defaultRumbleData[SWPROCON_RUMBLE_DATA_SIZE] = SWPROCON_RUMBLE_DATA_DEFAULT;
-static const uint8_t switchProCon_rumbleArray[2][SWPROCON_RUMBLE_DATA_SIZE] = {SWPROCON_RUMBLE_DATA_VIBRATE_RIGHT, SWPROCON_RUMBLE_DATA_VIBRATE_LEFT};
+static const uint8_t defaultRumbleData[SWITCH_RUMBLE_DATA_SIZE] = SWITCH_RUMBLE_DATA_DEFAULT;
+static const uint8_t switchProCon_rumbleArray[2][SWITCH_RUMBLE_DATA_SIZE] = {SWITCH_RUMBLE_DATA_VIBRATE_RIGHT, SWITCH_RUMBLE_DATA_VIBRATE_LEFT};
 
 static const uint8_t defaultPlayerLed = 0x0f;
 static const uint8_t switchProCon_playerLed[2][4] = { {0xE, 0xD, 0xB, 0x7},
@@ -67,14 +68,6 @@ controller_api_interface switchProCon_api =  {  &switchProCon_mount,
                                                 &switchProCon_executeTick
                                               };
 
-
-/*
-switch_pro_init_states::switch_pro_init_states()
-{
-  hciSleeping = rumbleEnabled = imuEnabled = fullReportMode = homeLedSet = playerLedSet = false;
-}
-*/
-
 ////////////////////////////////////////////////////
 //Switch Pro Check
 bool switchProCon_is_hardware(uint8_t dev_addr)
@@ -82,7 +75,7 @@ bool switchProCon_is_hardware(uint8_t dev_addr)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-  return ( (vid == 0x057e && pid == 0x2009)     //Swith Pro Controller
+  return (    (vid == 0x057e && pid == 0x2009)     //Swith Pro Controller
          );
 }
 
@@ -111,22 +104,22 @@ int rotateSwitchProReportPacketNumber()
 bool switchProCon_sendSubCmd(const uint8_t* subCmdbuf, int subCmdLen, const uint8_t* rumbleDataBuf)
 {
   bool result = false;
-  if ((millis() - switchProCon_lastPacketSentTime > SWPROCON_REPORT_INTERVAL) || (tuh_hid_send_ready(registeredDaddr, registeredInstance)))
+  if ((millis() - switchProCon_lastPacketSentTime > SWITCH_SEND_REPORT_INTERVAL) || (tuh_hid_send_ready(registeredDaddr, registeredInstance)))
   {
-    int subCmdSize = sizeof(nintendo_switchProCon_subCmd_report_t) + subCmdLen - 1;
+    int subCmdSize = sizeof(nintendo_switch_subCmd_report_t) + subCmdLen - 1;
     uint8_t subCmdData[subCmdSize]= {0};
-    nintendo_switchProCon_subCmd_report_t* subCmdReport = (nintendo_switchProCon_subCmd_report_t*)subCmdData;
+    nintendo_switch_subCmd_report_t* subCmdReport = (nintendo_switch_subCmd_report_t*)subCmdData;
 
     subCmdReport->packetNum = rotateSwitchProReportPacketNumber();
-    if (SWPROCON_NO_DATA == rumbleDataBuf)
+    if (SWITCH_NO_DATA == rumbleDataBuf)
     {
-      memcpy(subCmdReport->rumbleData, defaultRumbleData, SWPROCON_RUMBLE_DATA_SIZE);
+      memcpy(subCmdReport->rumbleData, defaultRumbleData, SWITCH_RUMBLE_DATA_SIZE);
     } else {
-      memcpy(subCmdReport->rumbleData, rumbleDataBuf, SWPROCON_RUMBLE_DATA_SIZE);
+      memcpy(subCmdReport->rumbleData, rumbleDataBuf, SWITCH_RUMBLE_DATA_SIZE);
     }
     memcpy(&subCmdReport->subCmdId, subCmdbuf, subCmdLen);
 
-    result = tuh_hid_send_report(registeredDaddr, registeredInstance, SWPROCON_OUTPUT_RUMBLE_AND_SUBCMD, subCmdReport, subCmdSize);
+    result = tuh_hid_send_report(registeredDaddr, registeredInstance, SWITCH_OUTPUT_RUMBLE_AND_SUBCMD, subCmdReport, subCmdSize);
 
     switchProCon_lastPacketSentTime = millis();
   }
@@ -143,18 +136,18 @@ bool switchProCon_updateHomeLed(const uint8_t* homeLedData)
   #endif
   */
 
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_HOME_LED] = {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_HOME_LED] = {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_HOME_LED;
+  subCmdData[0] = SWITCH_SUBCMD_HOME_LED;
 
   if (0 == homeLedData)
   {
-    memcpy(&subCmdData[1], defaultHomeLedData, SWPROCON_SUBCMD_DATA_SIZE_HOME_LED - 1);
+    memcpy(&subCmdData[1], defaultHomeLedData, SWITCH_SUBCMD_DATA_SIZE_HOME_LED - 1);
   } else {
-    memcpy(&subCmdData[1], homeLedData, SWPROCON_SUBCMD_DATA_SIZE_HOME_LED - 1);
+    memcpy(&subCmdData[1], homeLedData, SWITCH_SUBCMD_DATA_SIZE_HOME_LED - 1);
   }
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_HOME_LED, switchProCon_rumbleData);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_HOME_LED, switchProCon_rumbleData);
 }
 
 bool switchProCon_enableRumble()
@@ -165,12 +158,12 @@ bool switchProCon_enableRumble()
   #endif
   */
 
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_SET_ENABLE_VIBRATION]= {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_SET_ENABLE_VIBRATION]= {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_ENABLE_VIBRATION;
+  subCmdData[0] = SWITCH_SUBCMD_ENABLE_VIBRATION;
   subCmdData[1] = 0x01;
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_SET_ENABLE_VIBRATION, SWPROCON_NO_DATA);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_ENABLE_VIBRATION, SWITCH_NO_DATA);
 }
 
 bool switchProCon_setFullReportMode()
@@ -180,12 +173,12 @@ bool switchProCon_setFullReportMode()
     debugPort->println("[SwPro] Setting full report mode");
   #endif
   */
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_SET_REPORT_MODE]= {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_SET_REPORT_MODE]= {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_SET_REPORT_MODE;
+  subCmdData[0] = SWITCH_SUBCMD_SET_REPORT_MODE;
   subCmdData[1] = 0x30;
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_SET_REPORT_MODE, 0);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_REPORT_MODE, 0);
 }
 
 bool switchProCon_setPlayerLedNum(const uint8_t* ledData, const uint8_t* rumbleData)
@@ -195,17 +188,17 @@ bool switchProCon_setPlayerLedNum(const uint8_t* ledData, const uint8_t* rumbleD
     debugPort->println("[SwPro] Setting Player LED");
   #endif
   */
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_SET_PLAYER_LEDS]= {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_SET_PLAYER_LEDS]= {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_SET_PLAYER_LEDS;
-  if (SWPROCON_NO_DATA == ledData)
+  subCmdData[0] = SWITCH_SUBCMD_SET_PLAYER_LEDS;
+  if (SWITCH_NO_DATA == ledData)
   {
     subCmdData[1] = 0x0F;
   } else {
     subCmdData[1] = *ledData;
   }
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_SET_PLAYER_LEDS, rumbleData);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_PLAYER_LEDS, rumbleData);
 }
 
 bool switchProCon_queryDeviceInfo()
@@ -214,20 +207,20 @@ bool switchProCon_queryDeviceInfo()
     debugPort->println("[SwPro] Query device info");
   #endif
 
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_QUERY_DEV_INFO]= {0};
-  subCmdData[0] = SWPROCON_SUBCMD_QUERY_DEV_INFO;
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_QUERY_DEV_INFO]= {0};
+  subCmdData[0] = SWITCH_SUBCMD_QUERY_DEV_INFO;
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_QUERY_DEV_INFO, 0);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_QUERY_DEV_INFO, 0);
 }
 
 bool switchProCon_sleepHci()
 {
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_SET_HCI_STATE]= {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_SET_HCI_STATE]= {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_SET_HCI_STATE;
+  subCmdData[0] = SWITCH_SUBCMD_SET_HCI_STATE;
   subCmdData[1] = 0x00;
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_SET_HCI_STATE, 0);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_HCI_STATE, 0);
 }
 
 bool switchProCon_setImu()
@@ -237,12 +230,12 @@ bool switchProCon_setImu()
     debugPort->println("[SwPro] Enabling IMU");
   #endif
   */
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_SET_IMU]= {0};
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_SET_IMU]= {0};
 
-  subCmdData[0] = SWPROCON_SUBCMD_SET_IMU;
+  subCmdData[0] = SWITCH_SUBCMD_SET_IMU;
   subCmdData[1] = 0x01;
 
-  return switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_SET_IMU, 0);
+  return switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_IMU, 0);
 }
 
 //The subCmd to get new report data from the Switch Pro controller
@@ -254,10 +247,10 @@ void switchProCon_renewReport()
   #endif
   */
 
-  uint8_t subCmdData[SWPROCON_SUBCMD_DATA_SIZE_STATE]= {0};
-  subCmdData[0] = SWPROCON_SUBCMD_STATE;
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_STATE]= {0};
+  subCmdData[0] = SWITCH_SUBCMD_STATE;
 
-  while(!switchProCon_sendSubCmd(subCmdData, SWPROCON_SUBCMD_DATA_SIZE_STATE, switchProCon_rumbleData)) ;
+  while(!switchProCon_sendSubCmd(subCmdData, SWITCH_SUBCMD_DATA_SIZE_STATE, switchProCon_rumbleData)) ;
 }
 
 /////////////////////////////
@@ -266,7 +259,7 @@ void switchProConHandshake(const uint8_t* report, uint16_t len)
 {
   uint8_t report_id = report[0];
 
-  nintendo_switchProCon_output_report_80_t output_report = {0};
+  nintendo_switch_output_report_80_t output_report = {0};
 
   // USB Input Response
   if (0x81 == report[0])
@@ -284,9 +277,9 @@ void switchProConHandshake(const uint8_t* report, uint16_t len)
           debugPort->println("[SwPro]<<S1>> Setting baudrate");
         #endif
 
-        output_report.cmd = PRO_USB_CMD_BAUDRATE_3M;
+        output_report.cmd = SWITCH_USB_CMD_BAUDRATE_3M;
 
-        while(tuh_hid_send_report( registeredDaddr, registeredInstance, SWPROCON_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
+        while(tuh_hid_send_report( registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
         //delay(25);
         switchProStates.switchPro_baudRateSet = true;
       } else {
@@ -311,8 +304,8 @@ void switchProConHandshake(const uint8_t* report, uint16_t len)
         debugPort->println("[SwPro] Baudrate set successfully. Handshake again");
       #endif
 
-      output_report.cmd = PRO_USB_CMD_HANDSHAKE;
-      while(tuh_hid_send_report( registeredDaddr, registeredInstance, SWPROCON_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
+      output_report.cmd = SWITCH_USB_CMD_HANDSHAKE;
+      while(tuh_hid_send_report( registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
     }
 
     if (2 == report[1])
@@ -333,9 +326,9 @@ void switchProConHandshake(const uint8_t* report, uint16_t len)
           debugPort->println("[SwPro]<<S2>> Start polling 8bitdo M30 controller in wired mode");
         #endif
 
-        nintendo_switchProCon_output_report_80_t output_report = {0};
-        output_report.cmd = PRO_USB_CMD_NO_TIMEOUT;
-        while( tuh_hid_send_report(registeredDaddr, registeredInstance, SWPROCON_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
+        nintendo_switch_output_report_80_t output_report = {0};
+        output_report.cmd = SWITCH_USB_CMD_NO_TIMEOUT;
+        while( tuh_hid_send_report(registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
         //delay(25);
       }
 
@@ -350,15 +343,15 @@ void switchProConHandshake(const uint8_t* report, uint16_t len)
   {
     switchProConIsActually8bitdo = false; // only genuine Nintendo Switch Pro controller sends report 0x00 in confusion
 
-    if (millis() - switchProCon_lastResetTiming > PRO_USB_RESET_WAIT)
+    if (millis() - switchProCon_lastResetTiming > SWITCH_USB_RESET_WAIT)
     {
       #ifdef SWITCHPRO_DBG
         debugPort->println("[SwPro] Genuine controller stuck in wrong more. Resetting...");
       #endif
 
-      nintendo_switchProCon_output_report_80_t output_report = {0};
-      output_report.cmd = PRO_USB_CMD_RESET;
-      tuh_hid_send_report(registeredDaddr, registeredInstance, SWPROCON_OUTPUT_USB_CMD, &output_report, sizeof(output_report));
+      nintendo_switch_output_report_80_t output_report = {0};
+      output_report.cmd = SWITCH_USB_CMD_RESET;
+      tuh_hid_send_report(registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report));
 
       switchProCon_lastResetTiming = millis();
     }
@@ -419,9 +412,9 @@ void switchProCon_applyControllerSettings()
 
 /////////////////////////////
 
-void process_switchProCon_input_report(nintendo_switchProCon_input_report_common_data* commonInputData)
+void process_switchProCon_input_report(nintendo_switch_input_report_common_data* commonInputData)
 {
-  nintendo_switchProCon_input_report_common_data switchProCon_report;
+  nintendo_switch_input_report_common_data switchProCon_report;
   memcpy(&switchProCon_report, commonInputData, sizeof(switchProCon_report));
 
   if (switchProCon_report.ly > PRO_CON_ANALOG_UP_RIGHT_ACTIVE_VALUE ||
@@ -501,9 +494,9 @@ void process_switchProCon_input_report(nintendo_switchProCon_input_report_common
   switchProCon_applyControllerSettings();
 }
 
-void process_8bitdo_m30_input_report(nintendo_switchProCon_input_report_common_data* commonInputData)
+void process_8bitdo_m30_input_report(nintendo_switch_input_report_common_data* commonInputData)
 {
-  nintendo_switchProCon_input_report_common_data m30_8bitdo_report;
+  nintendo_switch_input_report_common_data m30_8bitdo_report;
   memcpy(&m30_8bitdo_report, commonInputData, sizeof(m30_8bitdo_report));
 
   if (M30_8BITDO_DIRECTION_UP     ||
@@ -577,9 +570,9 @@ void process_nintendo_switchProCon(uint8_t const* report, uint16_t len, uint8_t 
     switchProConHandshake(report, len);
   } else if (0x21 == report_id) // Genuine Nintendo Switch Pro Controller in partial report mode
   {
-    nintendo_switchProCon_input_report_21_t switchProCon_report_21;
+    nintendo_switch_input_report_21_t switchProCon_report_21;
     memcpy(&switchProCon_report_21, report + 1, sizeof(switchProCon_report_21));
-    nintendo_switchProCon_input_report_common_data* commonData_21;
+    nintendo_switch_input_report_common_data* commonData_21;
     commonData_21 = &switchProCon_report_21.commonData;
 
     //only genuine Switch Pro controller sends report 0x21
@@ -589,10 +582,10 @@ void process_nintendo_switchProCon(uint8_t const* report, uint16_t len, uint8_t 
 
   } else {  // report id is 0x30
     //report++;
-    nintendo_switchProCon_input_report_30_t switchProCon_report_30;
+    nintendo_switch_input_report_30_t switchProCon_report_30;
     memcpy(&switchProCon_report_30, report + 1, sizeof(switchProCon_report_30));
 
-    nintendo_switchProCon_input_report_common_data* commonData_30;
+    nintendo_switch_input_report_common_data* commonData_30;
     commonData_30 = &switchProCon_report_30.commonData;
 
     
@@ -658,9 +651,9 @@ void switchProCon_mount(uint8_t dev_addr, uint8_t instance)
       #endif
 
       //probe the controller
-      nintendo_switchProCon_output_report_80_t output_report = {0};
-      output_report.cmd = PRO_USB_CMD_HANDSHAKE;
-      while( tuh_hid_send_report(registeredDaddr, registeredInstance, SWPROCON_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
+      nintendo_switch_output_report_80_t output_report = {0};
+      output_report.cmd = SWITCH_USB_CMD_HANDSHAKE;
+      while( tuh_hid_send_report(registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
     }
   }
 }
@@ -703,60 +696,72 @@ bool switchProCon_has_activity()
 
 void switchProCon_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  if (false == switchProTicked)
+  if ( switchProCon_is_hardware(dev_addr) )
   {
-    #ifdef SWITCHPRO_DBG
-      debugPort->println("[Tick] Switch Pro home LED set to fast");
-    #endif
+    if (false == switchProTicked)
+    {
+      #ifdef SWITCHPRO_DBG
+        debugPort->println("[Tick] Switch Pro home LED set to fast");
+      #endif
 
-    switchProCon_homeLedData = fastBlinkHomeLedData;
-    switchProStates.homeLedSet = false;
-    switchProTicked = true;
+      switchProCon_homeLedData = fastBlinkHomeLedData;
+      switchProStates.homeLedSet = false;
+      switchProTicked = true;
+    }
   }
 }
 
 void switchProCon_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  if (switchProCon_is_registeredInstance(dev_addr, instance))
+  if ( switchProCon_is_hardware(dev_addr) )
   {
-    switchProCon_ledData = &switchProCon_playerLed[holdState][switchProCon_ledOffset];
-
-    if (0 == numOfTicks % 3)
+    if (switchProCon_is_registeredInstance(dev_addr, instance))
     {
-      if (++switchProCon_ledOffset > 3)
+      switchProCon_ledData = &switchProCon_playerLed[holdState][switchProCon_ledOffset];
+
+      if (0 == numOfTicks % 3)
       {
-        switchProCon_ledOffset = 0;
+        if (++switchProCon_ledOffset > 3)
+        {
+          switchProCon_ledOffset = 0;
+        }
       }
-    }
 
-    if (++numOfTicks > 255)
-    {
-      numOfTicks = 0;
+      if (++numOfTicks > 255)
+      {
+        numOfTicks = 0;
+      }
     }
   }
 }
 
 void switchProCon_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  rumbleStartTime = millis();
-  switchProCon_rumbleData = &(switchProCon_rumbleArray[holdState][0]);
+  if ( switchProCon_is_hardware(dev_addr) )
+  {
+    rumbleStartTime = millis();
+    switchProCon_rumbleData = &(switchProCon_rumbleArray[holdState][0]);
 
-  #ifdef SWITCHPRO_DBG
-    debugPort->println("[Tick] Rumble " + String((holdState == 0)?"Right":"Left"));
-  #endif
+    #ifdef SWITCHPRO_DBG
+      debugPort->println("[Tick] Rumble " + String((holdState == 0)?"Right":"Left"));
+    #endif
+  }
 }
 
 void switchProCon_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
 {
-  //set data to update
-  switchProStates.playerLedSet = false;
-
-  //stop rumble when vibration duration is reached
-  if( millis() - rumbleStartTime > 50       || 
-      true == switchProConIsActually8bitdo  || 
-      false == deviceActivity               )
+  if ( switchProCon_is_hardware(dev_addr) )
   {
-    switchProCon_rumbleData = defaultRumbleData;
+    //set data to update
+    switchProStates.playerLedSet = false;
+
+    //stop rumble when vibration duration is reached
+    if( millis() - rumbleStartTime > 50       || 
+        true == switchProConIsActually8bitdo  || 
+        false == deviceActivity               )
+    {
+      switchProCon_rumbleData = defaultRumbleData;
+    }
   }
 }
 

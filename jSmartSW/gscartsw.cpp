@@ -77,12 +77,12 @@ void routine_gswAutoInputUpdate()
 
 void gsw_setModeAuto()
 {
-  setMode(PICO_MODE_AUTO);
+  setMode(GSW_MODE_AUTO);
 }
 
 void gsw_setModeManual()
 {
-  setMode(PICO_MODE_MANUAL);
+  setMode(GSW_MODE_MANUAL);
 }
 
 void gsw_writeInput(unsigned int inputNumber)
@@ -147,7 +147,7 @@ static void setMode(bool targetMode)
 {
   pinMode(EXT_PIN_OVERRIDE, INPUT_PULLUP);
 
-  if (PICO_MODE_MANUAL == targetMode)
+  if (GSW_MODE_MANUAL == targetMode)
   {
     digitalWrite(EXT_PIN_OVERRIDE, GSCART_OVERRIDE_PIN_MANUAL_MODE);
   } else {
