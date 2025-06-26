@@ -10,6 +10,12 @@
   extern HardwareSerial* debugPort;
   int msgCounter = 0;
 #endif
+/*
+#define CFG_TUSB_DEBUG 3
+#define TU_LOG_USBH 2
+*/
+
+//#define CFG_TUH_HUB   3
 
 Adafruit_USBH_Host USBHost;
 Adafruit_USBH_CDC SerialHost;
@@ -33,6 +39,11 @@ void usbHost_init()
 { 
   // Init USB Host on native controller roothub port0
   USBHost.begin(USB_NATIVE_HOST_ROOT_PORT);
+
+  /*
+  usb_stopUsbHost(); 
+  usb_restartUsbHost();
+  */
 }
 
 void routine_usbHostFtdi()
@@ -80,15 +91,27 @@ static void sniffRt4kState()
 {
   if (SerialHost.available())
   {
-  //set RT4K to ON state when detected
-    if (true == SerialHost.findUntil(RT4K_UART_MSG_POWER_ON, "\n"))//(0 == strcmp(newMsg.c_str(), RT4K_UART_MSG_POWER_ON))
+    #ifdef RT4K_PWR_DBG
+      //echoFromUsbSerialToDebugSerial();
+    #endif
+  
+    //set RT4K to ON state when detected
+    if (true == SerialHost.findUntil(RT4K_UART_MSG_POWER_ON, "\n"))
     {
+      #ifdef RT4K_PWR_DBG
+        debugPort->println("[RT4K PWR] Power ON detected!");
+      #endif
+      
       rt4k_setPowerState(RT4K_ON);
       usbActivitySet();
     }
     //set RT4K to OFF state when detected
-    if (true == SerialHost.findUntil(RT4K_UART_MSG_POWER_OFF, "\n"))//(0 == strcmp(newMsg.c_str(), RT4K_UART_MSG_POWER_OFF))
+    if (true == SerialHost.findUntil(RT4K_UART_MSG_POWER_OFF, "\n"))
     {
+      #ifdef RT4K_PWR_DBG
+        debugPort->println("[RT4K PWR] Power OFF detected!");
+      #endif
+
       rt4k_setPowerState(RT4K_OFF);
       usbActivitySet();
     }

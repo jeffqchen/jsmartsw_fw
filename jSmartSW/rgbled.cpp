@@ -595,7 +595,7 @@ void rgbLed_flashStuckButtons(int * buttonReading, int timesToBlink)
 
 void rgbLed_clearSaveDataAnimation()
 {
-  fill_rainbow_circular(rgbLeds, NUM_LEDS_FIRST_ROW, HUE_RED);
+  fl::fill_rainbow_circular(rgbLeds, NUM_LEDS_FIRST_ROW, HUE_RED);
   mirrorLedTopRowToBottomRow();
   FastLED.show();
 }

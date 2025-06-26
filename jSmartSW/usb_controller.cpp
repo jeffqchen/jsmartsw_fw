@@ -1,7 +1,9 @@
 #include "mydebug.h"
 
 #include <Arduino.h>
-#include "tusb.h"
+
+//#include "tusb.h"
+//#include "tusb_config.h"
 
 #include "usb_controller.h"
 #include "mypico.h"
@@ -43,7 +45,7 @@ void controller_holdLeftRightRumbleTick(holding_left_right holdState, uint8_t de
   // Tacktile rumble when tick is reset to 0
   if (0 == controllerHoldTick)
   {    
-    #ifdef CONTROLLER_DBG
+    #ifdef HID_DBG
       debugPort->println("[Tick] Trigger!");
     #endif
 
@@ -100,8 +102,11 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
   
-  #ifdef CONTROLLER_DBG
-    debugPort->println("[HID] Vid: 0x" + String(vid, HEX) + ", Pid: 0x" + String(pid, HEX));
+  #ifdef HID_DBG
+
+    debugPort->println("---------------------------");
+    debugPort->println("[HID Mount] dAddr: " + String(dev_addr) + ", instance: " + String(instance) + ", Vid: 0x" + String(vid, HEX) + ", Pid: 0x" + String(pid, HEX));
+    debugPort->println("---------------------------");
   #endif
   
   for (int i = 0; i < NUM_OF_API; i++)
@@ -113,6 +118,15 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 // Invoked when device with hid interface is un-mounted
 void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
 {
+  uint16_t vid, pid;
+  tuh_vid_pid_get(dev_addr, &vid, &pid);
+  
+  #ifdef HID_DBG
+    debugPort->println("---------------------------");
+    debugPort->println("[HID Unmount] dAddr: " + String(dev_addr) + ", instance: " + String(instance) + ", Vid: 0x" + String(vid, HEX) + ", Pid: 0x" + String(pid, HEX));
+    debugPort->println("---------------------------");
+  #endif
+
   for (int i = 0; i < NUM_OF_API; i++)
   {
     controllerEntity[i]->umount(dev_addr, instance);
@@ -128,8 +142,12 @@ void tuh_hid_report_received_cb(uint8_t dev_addr, uint8_t instance, uint8_t cons
     uint16_t displayBytes = len;
 
     #ifdef REPORT_FILTERING
-      if (NO_SWITCH_INPUT_REPORT
-          NO_DS3_REPORT
+      if (true
+          NO_SWITCH_INPUT_REPORT
+          NO_DS_REPORT
+          NO_JOYCON2_L_REPORT
+          NO_JOYCON2_R_REPORT
+          NO_PROCON2_REPORT
          )  
     #endif 
     #ifdef NO_REPORT_FILTERING

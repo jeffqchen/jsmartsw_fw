@@ -206,6 +206,7 @@ void screen_turnOff();
 //// special screens
 void screen_rebootScreen();
 void screen_buttonErrorRebootMessage();
+void screen_preClearSaveDataMessage();
 void screen_clearSaveDataMessage();
 
 //// Setup Mode

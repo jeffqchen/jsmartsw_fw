@@ -61,7 +61,7 @@ enum {
                                                   HUE_GREEN,  HUE_GREEN,  128,                        \
                                                   HUE_BLUE,   0, SPRING_PINK,  115,                   \
                                                   HUE_YELLOW,   200,                                  \
-                                                  SPRING_PINK,  190,  HUE_RED, 128, HUE_GREEN,  128,  \
+                                                  HUE_YELLOW, 200,  SPRING_PINK, 190, HUE_GREEN,  128,\
                                                   SPRING_PINK,  115                                   }                                         
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 #define RGBLED_COLOR_SCHEME_WINTER_DATA         { /* Winter Color Scheme */                           \

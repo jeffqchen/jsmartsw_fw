@@ -1,6 +1,6 @@
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 
 #include "mypico.h"
 #include "controller_md2x.h"
@@ -92,12 +92,12 @@ void process_md2x(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_t
 
   //select & start OR share & option
   immediateControllerData.button_start  |= md2x_input_report.button_start;
-  immediateControllerData.button_select |= md2x_input_report.button_mode;
+  //immediateControllerData.button_select |= md2x_input_report.button_mode;
   immediateControllerData.button_home   |= md2x_input_report.button_start;
 
   // shoulder buttons
   //immediateControllerData.button_l1 |= ;
-  //immediateControllerData.button_r1 |= ;
+  immediateControllerData.button_r1 |= md2x_input_report.button_mode;;
 
   //analog stick buttons
   immediateControllerData.button_l3 |= md2x_input_report.button_c;

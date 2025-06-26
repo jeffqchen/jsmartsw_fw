@@ -7,7 +7,7 @@ https://github.com/jeffqchen/PSX2USB_hardware
 //#include <sys/_stdint.h>
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include "usb_controller.h"
 
 #ifndef CONTROLLER_PSX2USB_H

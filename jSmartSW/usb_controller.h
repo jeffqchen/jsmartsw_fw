@@ -1,7 +1,8 @@
 #include <sys/_intsup.h>
 #include <sys/types.h>
 #include <sys/_stdint.h>
-#include "tusb.h"
+
+#include <Adafruit_TinyUSB.h>
 
 #include "mypico.h"
 

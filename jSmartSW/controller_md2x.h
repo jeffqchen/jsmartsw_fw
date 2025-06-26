@@ -4,7 +4,7 @@ A USB HID adapter that supports two Genesis/MegaDrive controllers at the same ti
 https://github.com/jeffqchen/Genesis-2X-Controller-to-USB-Adapter
 */
 
-#include "tusb.h"
+//#include "tusb.h"
 #include "usb_controller.h"
 
 #ifndef CONTROLLER_SEGA_md2x_H

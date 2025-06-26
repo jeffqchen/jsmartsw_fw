@@ -1,6 +1,6 @@
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 
 #include <Arduino.h>
 
@@ -169,7 +169,7 @@ void ds3_mount(uint8_t dev_addr, uint8_t instance)
       while (!tuh_hid_receive_ready(dev_addr, instance))
       {
         #ifdef DS3_DBG
-          debugPort->println("[DS3]Waiting for DS3");
+          debugPort->println("[DS3] Waiting for DS3");
         #endif
       }
 
@@ -178,18 +178,18 @@ void ds3_mount(uint8_t dev_addr, uint8_t instance)
       tuh_hid_get_report(dev_addr, instance, 0xf2, HID_REPORT_TYPE_FEATURE , getBuf, 17);
 
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Stage1: Set USB mode");
+        debugPort->println("[DS3] Stage1: Set USB mode");
       #endif
     }
 
     if ( !tuh_hid_receive_report(dev_addr, instance) )
     {
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Couldn't receive report");
+        debugPort->println("[DS3] Couldn't receive report");
       #endif
     } else {
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Can receive report!");
+        debugPort->println("[DS3] Can receive report!");
       #endif
     }
   }
@@ -218,11 +218,11 @@ void ds3_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t rep
     if (0 == len)
     {
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Stage3: Possible set report error!");
+        debugPort->println("[DS3] Stage3: Possible set report error!");
       #endif
     } else {
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Stage3: Set report completed");
+        debugPort->println("[DS3] Stage3: Set report completed");
       #endif
     }
   }
@@ -236,13 +236,13 @@ void ds3_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t rep
     if (0 == len)
     {
       #ifdef DS3_DBG
-        debugPort->println("[DS3]Stage2: Get report error!");
+        debugPort->println("[DS3] Stage2: Get report error!");
       #endif
     } else {
       if (0xf2 == report_id)
       {
         #ifdef DS3_DBG
-          debugPort->println("[DS3]Stage2: Official method enabled. Enabling unofficial method");
+          debugPort->println("[DS3] Stage2: Official method enabled. Enabling unofficial method");
         #endif
 
         u_char getBuf[8];
@@ -252,7 +252,7 @@ void ds3_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t rep
       if (0xf5 == report_id)
       {
         #ifdef DS3_DBG
-          debugPort->println("[DS3]Stage2: Unofficial method enabled. Get report completed. Start getting USB report");
+          debugPort->println("[DS3] Stage2: Unofficial method enabled. Get report completed. Start getting USB report");
         #endif
 
         u_char enableHidReport[4] = {0x42, 0x0c, 0x0, 0x0};

@@ -8,11 +8,11 @@
 
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include <Arduino.h>
 
 #include "mypico.h"
-#include "nintendo_switch_controller.h"
+#include "nintendo_swcon_lib.h"
 #include "controller_nintendo_switch_pro.h"
 #include "usb_controller.h"
 #include "supported_controllers.h"

@@ -24,6 +24,7 @@ static bool core1SetupFinish = false;
 static bool core2SetupFinish = false;
 static bool stopCore2 = false;
 static bool restartCore2 = false;
+static bool core2LoopFinished = false;
 
 //jSmartSW main program running mode
 static int mainProgramMode = JSMARTSW_NORMAL_MODE;
@@ -259,8 +260,15 @@ void jsmartsw_core1Loop()
   //check and write data if necessary
   routine_writeSaveDataToFlash();
 
+  /*
   //Feed the dog
-  watchdog_update();
+  if (true == core2LoopFinished)
+  {
+    watchdog_update();
+    core2LoopFinished = false;
+  }
+  */
+   watchdog_update();
 }
 
 void jsmartsw_core2Loop()
@@ -269,6 +277,8 @@ void jsmartsw_core2Loop()
   // Wait for core 1 to finish initialization
   while(!core1SetupFinish) ;
   ////////////////////////////////////////////
+
+  //core2LoopFinished = false;
 
   if (true == stopCore2)
   {
@@ -304,6 +314,8 @@ void jsmartsw_core2Loop()
     debugPort->println(timingMsg2);
   #endif
   }
+
+  core2LoopFinished = true;
 }
 
 ////////////////////////////////////////
@@ -524,6 +536,7 @@ static void routine_keypad()
         {
           screen_setCommandTextUpdate(commandText[1], SCREEN_COMMAND_SHIFT_DISPLAY_DURATION);
         }
+        
         pico_ledSetPeriod(PICO_LED_DELAY_MANUAL); //LED flash faster
       } else {
         currentKeypadData.shiftOn = false;
@@ -1297,6 +1310,7 @@ static void enterSetupMode()
   clearAllInputData();
   setupMode_initialEnter = true;
   mainProgramMode = JSMARTSW_ENTERING_SETUP_MODE;
+  pico_ledSetPeriod(PICO_LED_DELAY_SETUP);
 
   setupMode_keepalive();
 }
@@ -1306,6 +1320,13 @@ static void exitSetupMode()
   clearAllInputData();
   energySaverEnabled = true;
   mainProgramMode = JSMARTSW_EXITING_SETUP_MODE;
+
+  if (GSW_MODE_AUTO == gswMode)
+  {
+    pico_ledSetPeriod(PICO_LED_DELAY_AUTO);
+  } else {
+    pico_ledSetPeriod(PICO_LED_DELAY_MANUAL);
+  }
 }
 
 static void setupMode_keepalive()
@@ -1674,6 +1695,7 @@ static void keypadBootCheck()
     #endif
 
     pico_ledSetPeriod(PICO_LED_DELAY_FAULTY);
+    
 
     if (BUTTON_DOWN == buttonReading[1] && BUTTON_DOWN == buttonReading[6])
     {
@@ -1690,6 +1712,9 @@ static void keypadBootCheck()
         routine_writeSaveDataToFlash();
         delay(1000);
         pico_mcuReboot();
+      } else {      
+        screen_preClearSaveDataMessage();
+        rgbLed_flashStuckButtons(buttonReading, PICO_BUTTON_ERROR_BLINK_CYCLE_COUNT);
       } 
     } else {
       screen_buttonErrorRebootMessage();

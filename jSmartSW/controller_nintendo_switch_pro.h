@@ -1,7 +1,7 @@
 #include "common/tusb_compiler.h"
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include "usb_controller.h"
 
 #ifndef CONTROLLER_NINTENDO_SWITCH_PRO_H

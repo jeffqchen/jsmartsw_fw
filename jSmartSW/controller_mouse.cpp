@@ -1,7 +1,7 @@
 #include "class/hid/hid.h"
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include <Arduino.h>
 
 #include "controller_mouse.h"
@@ -90,11 +90,11 @@ void process_mouse(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_
         // other buttons
         if (previous_mouse_input_report.button == MOUSE_BUTTON_5)
         {
-            immediateControllerData.button_r1   |= true;
+            immediateControllerData.apad_north   |= true;
 
         } else if (previous_mouse_input_report.button == MOUSE_BUTTON_4)
         {
-            immediateControllerData.button_l1   |= true;
+            immediateControllerData.apad_west   |= true;
         }
 
         if (previous_mouse_input_report.button == MOUSE_BUTTON_MIDDLE)
@@ -112,11 +112,11 @@ void process_mouse(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_
 
   if (mouse_input_report.wheel == MOUSE_WHEEL_UP)
   {
-    immediateControllerData.button_l2     |= true;
+    immediateControllerData.button_l1     |= true;
 
   } else if (mouse_input_report.wheel == MOUSE_WHEEL_DOWN)
   {
-    immediateControllerData.button_r2     |= true;
+    immediateControllerData.button_r1     |= true;
   }
 
   //////////////////////////////////////////////////////////////////

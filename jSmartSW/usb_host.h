@@ -3,7 +3,7 @@
 
 #define USB_TASK_INTERVAL 10 //ms
 
-#define RT4K_UART_MSG_POWER_ON  "Normal Boot"
+#define RT4K_UART_MSG_POWER_ON  "FPGA"
 #define RT4K_UART_MSG_POWER_OFF "Jumping to Application"
 
 #define RT4K_USB_VID  0x0403

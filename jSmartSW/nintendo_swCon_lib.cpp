@@ -1,10 +1,11 @@
 #include <sys/_stdint.h>
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
+#include "usb_controller.h"
 #include <Arduino.h>
 
-#include "nintendo_switch_controller.h"
+#include "nintendo_swcon_lib.h"
 
 #ifdef DEBUG
   extern HardwareSerial* debugPort;
@@ -171,6 +172,37 @@ bool switchController_setImu(switchController_instance * currentInstance)
   return switchController_sendSubCmd(currentInstance, subCmdData, SWITCH_SUBCMD_DATA_SIZE_SET_IMU);
 }
 
+bool switchController_outOfLowPowerMode(switchController_instance * currentInstance)
+{
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_LOW_POWER_STATE]= {0};
+  subCmdData[0] = SWITCH_SUBCMD_LOW_POWER_STATE;
+  subCmdData[1] = 0x00;
+
+  return switchController_sendSubCmd(currentInstance, subCmdData, SWITCH_SUBCMD_DATA_SIZE_LOW_POWER_STATE);
+}
+
+bool switchController_EnterLowPowerMode(switchController_instance * currentInstance)
+{
+  bool result = false;
+  
+  uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_LOW_POWER_STATE]= {0};
+  subCmdData[0] = SWITCH_SUBCMD_LOW_POWER_STATE;
+  subCmdData[1] = 0x01;
+
+  #ifdef SWITCHLIB_DBG
+    debugPort->println("[SwConLib] Putting to sleep");
+  #endif
+  
+  result = switchController_sendSubCmd(currentInstance, subCmdData, SWITCH_SUBCMD_DATA_SIZE_LOW_POWER_STATE);
+
+  if (true == result)
+  {
+    currentInstance->initState.putToSleep = true;
+  }
+
+  return result;
+}
+
 //The subCmd to get new report data from the Switch Pro controller
 void switchController_renewReport(switchController_instance * currentInstance)
 {
@@ -183,27 +215,41 @@ void switchController_renewReport(switchController_instance * currentInstance)
   uint8_t subCmdData[SWITCH_SUBCMD_DATA_SIZE_STATE]= {0};
   subCmdData[0] = SWITCH_SUBCMD_STATE;
 
-  while(!switchController_sendSubCmd(currentInstance, subCmdData, SWITCH_SUBCMD_DATA_SIZE_STATE)) ;
+  if (false == currentInstance->initState.putToSleep)
+  {
+    while(!switchController_sendSubCmd(currentInstance, subCmdData, SWITCH_SUBCMD_DATA_SIZE_STATE)) ;
+  }
 }
 
+//// Process various state initializations of JoyCon
 void switchController_applyControllerSettings(switchController_instance * currentInstance)
 {
   #ifdef SWITCHLIB_DBG
     String controllerTypeDbgText;
     switch (currentInstance->controllerType)
     {
-      case SWITCH_ID_JOYCON_LEFT:
-        controllerTypeDbgText = "JoyCon Left ";
+      case SWITCH_TYPE_JOYCON_LEFT:
+        controllerTypeDbgText = "JoyCon L";
         break;
-      case SWITCH_ID_JOYCON_RIGHT:
-        controllerTypeDbgText = "JoyCon Right";
+      case SWITCH_TYPE_JOYCON_RIGHT:
+        controllerTypeDbgText = "JoyCon R";
         break;
-      case SWITCH_ID_PROCON:
+      case SWITCH_TYPE_PROCON:
         controllerTypeDbgText = "Pro Controller";
         break;
     }
   #endif
 
+
+  /*if (false == currentInstance->initState.awake)
+  {
+    #ifdef SWITCHLIB_DBG
+      debugPort->println("[SwConLib | " + controllerTypeDbgText + "] INIT - Wake up from deep sleep");
+    #endif
+
+    currentInstance->initState.awake = switchController_outOfLowPowerMode(currentInstance);
+
+  } else */
   if (false == currentInstance->initState.imuEnabled)
   {
     #ifdef SWITCHLIB_DBG
@@ -262,5 +308,5 @@ void switchController_sendHidCommand(uint8_t hidCmd, uint8_t dev_addr, uint8_t d
 {
   nintendo_switch_output_report_80_t output_report = {0};
   output_report.cmd = hidCmd;
-  while(tuh_hid_send_report( dev_addr, dev_instance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
+  while(!tuh_hid_send_report( dev_addr, dev_instance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
 }

@@ -4,10 +4,10 @@
 
 #include "tusb.h"
 #include "usb_controller.h"
-#include "nintendo_switch_controller.h"
+#include "nintendo_swcon_lib.h"
 
-#ifndef CONTROLLER_NINTENDO_JOYCON_H
-#define CONTROLLER_NINTENDO_JOYCON_H
+#ifndef CONTROLLER_NINTENDO_SWITCH_H
+#define CONTROLLER_NINTENDO_SWITCH_H
 
 
 enum {
@@ -19,8 +19,9 @@ enum {
 
 #define NUM_OF_CONTROLLERS  JOYCON_IDX_END
 
-#define JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE  2500
-#define JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE 1500
+#define JOYCON_ANALOG_NEUTRUAL_VALUE          2000
+#define JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE   2700
+#define JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE  1200
 
 #endif
 

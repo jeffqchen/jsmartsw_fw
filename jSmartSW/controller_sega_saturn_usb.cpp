@@ -1,7 +1,7 @@
 #include "common/tusb_types.h"
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 
 #include "controller_sega_saturn_usb.h"
 #include "usb_controller.h"
@@ -36,7 +36,7 @@ bool saturn_usb_is_hardware(uint8_t dev_addr)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-  return ( (vid == 0x04b4 && pid == 0x010a)     //DS3
+  return (  (vid == 0x04b4 && pid == 0x010a)    // Saturn USB
          );
 }
 

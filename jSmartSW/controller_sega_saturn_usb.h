@@ -1,6 +1,6 @@
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include "usb_controller.h"
 
 #ifndef CONTROLLER_SEGA_SATURN_USB_H

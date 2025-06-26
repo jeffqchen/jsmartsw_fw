@@ -234,30 +234,33 @@ static void rt4kPowerRoutine()
 ////////////////////////////////
 void rt4k_cmdPowerToggle()
 {
-  //send remote power button action first
-  if (RT4K_UART_PORT_TYPE_HD15 == uartPortInUse)
+  if (false == rt4kPowerStateTransition)
   {
-    hd15Uart->println(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR));
-    rt4k_remoteWakeFromSleep();
-  } else if (RT4K_UART_PORT_TYPE_USBC == uartPortInUse)
-  {//using USB CDC communication
-    rt4kPowerStateTransition = true;
-
-    switch (rt4kPowerState)
+    //send remote power button action first
+    if (RT4K_UART_PORT_TYPE_HD15 == uartPortInUse)
     {
-      case RT4K_ON:
-        usbHostFtdi_sendToUsbSerial(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR)); //send the power command on the remote to turn it off
-        rt4kPowerState = RT4K_OFF;
-        rt4kPowerStateTransition = false;
-        break;
-      case RT4K_OFF:
-        rt4k_remoteWakeFromSleep();
-        break;
-      default:
-        usbHostFtdi_sendToUsbSerial(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR)); //send the power command on the remote to turn it off
-        rt4k_remoteWakeFromSleep();
-    }
-  } 
+      hd15Uart->println(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR));
+      rt4k_remoteWakeFromSleep();
+    } else if (RT4K_UART_PORT_TYPE_USBC == uartPortInUse)
+    {//using USB CDC communication
+      rt4kPowerStateTransition = true;
+
+      switch (rt4kPowerState)
+      {
+        case RT4K_ON:
+          usbHostFtdi_sendToUsbSerial(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR)); //send the power command on the remote to turn it off
+          rt4kPowerState = RT4K_OFF;
+          rt4kPowerStateTransition = false;
+          break;
+        case RT4K_OFF:
+          rt4k_remoteWakeFromSleep();
+          break;
+        default:
+          usbHostFtdi_sendToUsbSerial(String(RT4K_UART_REMOTE_COMMAND_PREFIX) + String(RT4K_IR_REMOTE_BUTTON_PWR)); //send the power command on the remote to turn it off
+          rt4k_remoteWakeFromSleep();
+      }
+    } 
+  }
 }
 
 void rt4k_cmdRes4k()
@@ -373,6 +376,10 @@ void rt4k_cycleQuickTabsDecrease()
 
 void rt4k_setPowerState(unsigned int newState)
 {
+  #ifdef RT4K_PWR_DBG
+    debugPort->println("[RT4K PWR] Setting power state to " + String(newState)); 
+  #endif
+
   rt4kPowerState = newState;
 }
 

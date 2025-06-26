@@ -2,8 +2,8 @@
 #include <sys/_stdint.h>
 #include "common/tusb_compiler.h"
 
-#ifndef NINTENDO_SWITCH_DEFINITIONS_H
-#define NINTENDO_SWITCH_DEFINITIONS_H
+#ifndef NINTENDO_SWCON_LIB_H
+#define NINTENDO_SWCON_LIB_H
 
 ///////////////////////////////
 //Controller reports definition
@@ -42,6 +42,9 @@
 #define SWITCH_SUBCMD_SET_HCI_STATE                   0x06
 #define SWITCH_SUBCMD_DATA_SIZE_SET_HCI_STATE         2
 
+#define SWITCH_SUBCMD_LOW_POWER_STATE                 0x08
+#define SWITCH_SUBCMD_DATA_SIZE_LOW_POWER_STATE       2
+
 #define SWITCH_SUBCMD_HOME_LED                        0x38
 #define SWITCH_SUBCMD_DATA_SIZE_HOME_LED              26
 
@@ -57,15 +60,15 @@
 #define SWITCH_NO_DATA  NULL
 
 // Nintendo Switch Pro Controller Reports
-#define SWITCH_USB_CONNECTION_STATUS 0x01
-#define SWITCH_USB_CMD_BAUDRATE_3M   0x03
-#define SWITCH_USB_CMD_HANDSHAKE     0x02
-#define SWITCH_USB_CMD_NO_TIMEOUT    0x04
-#define SWITCH_USB_CMD_YES_TIMEOUT   0x05
-#define SWITCH_USB_CMD_RESET         0x06
-#define SWITCH_USB_CMD_MCU_RESET     0x20
-#define SWITCH_USB_PRE_HANDSHAKE     0x92
-#define SWITCH_USB_SEND_UART         0x92
+#define SWITCH_USB_CONNECTION_STATUS  0x01
+#define SWITCH_USB_CMD_BAUDRATE_3M    0x03
+#define SWITCH_USB_CMD_HANDSHAKE      0x02
+#define SWITCH_USB_CMD_NO_TIMEOUT     0x04
+#define SWITCH_USB_CMD_YES_TIMEOUT    0x05
+#define SWITCH_USB_CMD_RESET          0x06
+#define SWITCH_USB_CMD_MCU_RESET      0x20
+#define SWITCH_USB_PRE_HANDSHAKE      0x92
+#define SWITCH_USB_SEND_UART          0x92
 
 #define SWITCH_USB_RESET_WAIT  1000
 
@@ -115,9 +118,10 @@
 
 // Controller type
 enum {
-  SWITCH_ID_JOYCON_LEFT   = 0x1,
-  SWITCH_ID_JOYCON_RIGHT,
-  SWITCH_ID_PROCON
+  SWITCH_TYPE_NOTSWCON = 0x0,
+  SWITCH_TYPE_JOYCON_L,
+  SWITCH_TYPE_JOYCON_R,
+  SWITCH_TYPE_PROCON
 };
 
 enum {
@@ -346,6 +350,8 @@ struct switch_controller_init_states
   bool baudRateSet;
   bool devInfoAcquired;
 
+  bool awake;
+  bool putToSleep;
   bool hciSleeping;
   bool rumbleEnabled;
   bool imuEnabled;
@@ -357,7 +363,7 @@ struct switch_controller_init_states
   unsigned long lastReportSendTime;
 
   switch_controller_init_states() {
-    devInfoAcquired = hciSleeping = rumbleEnabled = imuEnabled = fullReportMode = homeLedSet = playerLedSet = false;
+    devInfoAcquired = awake = putToSleep = hciSleeping = rumbleEnabled = imuEnabled = fullReportMode = homeLedSet = playerLedSet = false;
     lastReportSendTime = 0;
   }
 };
@@ -420,7 +426,10 @@ bool switchController_setPlayerLedNum   (switchController_instance *);
 bool switchController_queryDeviceInfo   (switchController_instance *);
 bool switchController_sleepHci          (switchController_instance *);
 bool switchController_setImu            (switchController_instance *);
-void switchController_renewReport       (switchController_instance *);
+bool switchController_outOfLowPowerMode (switchController_instance *);
+bool switchController_EnterLowPowerMode (switchController_instance *);
+
+void switchController_renewReport       (switchController_instance *);  //default action when there's nothing to do
 
 void switchController_applyControllerSettings(switchController_instance *);
 

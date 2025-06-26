@@ -483,12 +483,11 @@ static void drawScreenElement(bitmap_element_entity inputElement)
       inputElement.bitmapWidth  != 0    ||
       inputElement.bitmapHeight != 0    )
   {
-    display->drawBitmap(  inputElement.posX, inputElement.posY,
+    display->drawBitmap(inputElement.posX, inputElement.posY,
                         inputElement.bitmapData,
                         inputElement.bitmapWidth, inputElement.bitmapHeight,
                         inputElement.color);
   }
-  display->writePixel(0, 0, 1);
 }
 
 static void normalMode_inputElementInit(bitmap_element_entity *inputElement, int elementType)
@@ -680,7 +679,7 @@ static void normalMode_screen_inputNumberOrRotationAnimation()
     {
       drawScreenElement(currentInputIcon);                      
     }
-  }    
+  }   
 }
 
 static void normalMode_screenComponent_mascots()
@@ -798,7 +797,23 @@ void screen_buttonErrorRebootMessage()
   display->setTextColor(SSD1306_WHITE);
 
   displayTextStaticCenteredOrScrolling("Key",   0, 10);
-  displayTextStaticCenteredOrScrolling("Stuck",  0, 19);
+  displayTextStaticCenteredOrScrolling("Stuck", 0, 20);
+
+  display->display();
+}
+
+void screen_preClearSaveDataMessage()
+{
+  //OLED error message
+  display->clearDisplay();
+  display->setTextSize(1); // Draw 2X-scale text
+  display->setTextColor(SSD1306_WHITE);
+
+  displayTextStaticCenteredOrScrolling("Hold",  0, 10);
+  displayTextStaticCenteredOrScrolling("2 + 7", 0, 20);
+  displayTextStaticCenteredOrScrolling("To",    0, 30);
+  displayTextStaticCenteredOrScrolling("Reset", 0, 40);
+  displayTextStaticCenteredOrScrolling("Data",  0, 50);
 
   display->display();
 }

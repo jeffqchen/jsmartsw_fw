@@ -13,8 +13,8 @@
 #include <Arduino.h>
 
 #include "mypico.h"
-#include "nintendo_switch_controller.h"
-#include "controller_nintendo_joycon.h"
+//#include "nintendo_switch_controller.h"
+#include "controller_nintendo_switch.h"
 #include "usb_controller.h"
 #include "supported_controllers.h"
 
@@ -68,8 +68,7 @@ bool switchJoyCon_is_hardware(uint8_t dev_addr)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-  return (vid == 0x057e && pid == 0x200e);  //Swith Joy-Con Controller
-         
+  return  (vid == 0x057e && pid == 0x200e);  // Switch Joy-Con Grip
 }
 
 bool switchJoyCon_is_registeredInstance(uint8_t dev_addr)
@@ -94,7 +93,7 @@ bool isGripComplete()
 static void joyCon_clearLeftData()
 {
   #ifdef SWITCHJOYCON_DBG
-    debugPort->println("[JoyCon] Clear Left JoyCon Data");
+    debugPort->println("[JoyCon L] Clear JoyCon Data");
   #endif
 
   mergedJoyConReport.dpad_down  = 0;
@@ -102,8 +101,8 @@ static void joyCon_clearLeftData()
   mergedJoyConReport.dpad_right = 0;
   mergedJoyConReport.dpad_left  = 0;
 
-  mergedJoyConReport.lx = 2000;
-  mergedJoyConReport.ly = 2000;
+  mergedJoyConReport.lx = JOYCON_ANALOG_NEUTRUAL_VALUE;
+  mergedJoyConReport.ly = JOYCON_ANALOG_NEUTRUAL_VALUE;
   mergedJoyConReport.button_l3 = 0;
 
   mergedJoyConReport.button_minus = 0;
@@ -116,7 +115,7 @@ static void joyCon_clearLeftData()
 static void joyCon_clearRightData()
 {
   #ifdef SWITCHJOYCON_DBG
-    debugPort->println("[JoyCon] Clear Right JoyCon Data");
+    debugPort->println("[JoyCon R] Clear JoyCon Data");
   #endif
 
   mergedJoyConReport.button_a = 0;
@@ -124,8 +123,8 @@ static void joyCon_clearRightData()
   mergedJoyConReport.button_x = 0;
   mergedJoyConReport.button_y = 0;
 
-  mergedJoyConReport.rx = 2000;
-  mergedJoyConReport.ry = 2000;
+  mergedJoyConReport.rx = JOYCON_ANALOG_NEUTRUAL_VALUE;
+  mergedJoyConReport.ry = JOYCON_ANALOG_NEUTRUAL_VALUE;
   mergedJoyConReport.button_r3 = 0;
 
   mergedJoyConReport.button_plus = 0;
@@ -228,6 +227,10 @@ void joyCon_processMergedInputReport(uint8_t instance)
       mergedJoyConReport.ly < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE||
       mergedJoyConReport.lx < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE||
       mergedJoyConReport.lx > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE ||
+      mergedJoyConReport.ry > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE ||
+      mergedJoyConReport.ry < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE||
+      mergedJoyConReport.rx < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE||
+      mergedJoyConReport.rx > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE ||
       mergedJoyConReport.dpad_down     ||
       mergedJoyConReport.dpad_up       ||
       mergedJoyConReport.dpad_right    ||
@@ -275,11 +278,23 @@ void joyCon_processMergedInputReport(uint8_t instance)
   // Button Mapping
   /////////////////////////////
   //directional controls
-  immediateControllerData.dpad_up     |=  (mergedJoyConReport.dpad_up    || mergedJoyConReport.ly > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE);
-  immediateControllerData.dpad_down   |=  (mergedJoyConReport.dpad_down  || mergedJoyConReport.ly < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE);
-  immediateControllerData.dpad_left   |=  (mergedJoyConReport.dpad_left  || mergedJoyConReport.lx < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE);
-  immediateControllerData.dpad_right  |=  (mergedJoyConReport.dpad_right || mergedJoyConReport.lx > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE);
+  immediateControllerData.dpad_up     |=  mergedJoyConReport.dpad_up;
+  immediateControllerData.dpad_down   |=  mergedJoyConReport.dpad_down;
+  immediateControllerData.dpad_left   |=  mergedJoyConReport.dpad_left;
+  immediateControllerData.dpad_right  |=  mergedJoyConReport.dpad_right;
 
+  if (true == joyCons[JOYCON_IDX_LEFT].present)
+  {
+    immediateControllerData.dpad_up     |=  mergedJoyConReport.ly > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE;
+    immediateControllerData.dpad_down   |=  mergedJoyConReport.ly < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE;
+    immediateControllerData.dpad_left   |=  mergedJoyConReport.lx < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE;
+    immediateControllerData.dpad_right  |=  mergedJoyConReport.lx > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE;
+  } else {
+    immediateControllerData.dpad_up     |=  mergedJoyConReport.ry > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE;
+    immediateControllerData.dpad_down   |=  mergedJoyConReport.ry < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE;
+    immediateControllerData.dpad_left   |=  mergedJoyConReport.rx < JOYCON_ANALOG_DOWN_LEFT_ACTIVE_VALUE;
+    immediateControllerData.dpad_right  |=  mergedJoyConReport.rx > JOYCON_ANALOG_UP_RIGHT_ACTIVE_VALUE;
+  }
 
   //face buttons
   immediateControllerData.apad_north  |= mergedJoyConReport.button_x;
@@ -302,6 +317,22 @@ void joyCon_processMergedInputReport(uint8_t instance)
   //analog stick buttons
   immediateControllerData.button_l3 |= mergedJoyConReport.button_l3;
   immediateControllerData.button_r3 |= mergedJoyConReport.button_r3;
+
+  #ifdef SWITCHJOYCON_DBG
+    if (true == mergedJoyConReport.button_r3)
+    {
+      if (false ==joyCons[JOYCON_IDX_LEFT].initState.putToSleep)
+      {
+        switchController_EnterLowPowerMode(&joyCons[JOYCON_IDX_LEFT]);
+        switchController_sleepHci(&joyCons[JOYCON_IDX_LEFT]);
+      }
+      if (false ==joyCons[JOYCON_IDX_RIGHT].initState.putToSleep)
+      {
+        switchController_EnterLowPowerMode(&joyCons[JOYCON_IDX_RIGHT]);
+        switchController_sleepHci(&joyCons[JOYCON_IDX_RIGHT]);
+      }
+    }
+  #endif
 }
 
 static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8_t const* report, uint16_t len)
@@ -316,7 +347,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
     joyConIndex = JOYCON_IDX_LEFT;
 
     #ifdef SWITCHJOYCON_DBG
-      controllerTypeDbgText = "JoyCon Left";
+      controllerTypeDbgText = "JoyCon L";
     #endif
   } else 
   if (dev_instance == joyCons[JOYCON_IDX_RIGHT].dev_instance)
@@ -324,7 +355,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
     joyConIndex = JOYCON_IDX_RIGHT;
 
     #ifdef SWITCHJOYCON_DBG
-      controllerTypeDbgText = "JoyCon Right";
+      controllerTypeDbgText = "JoyCon R";
     #endif
   } else 
   if (dev_instance == joyCons[JOYCON_IDX_PRO].dev_instance)
@@ -347,9 +378,9 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
         memcpy(&connResponse, report, sizeof(nintendo_switch_respond_report_conn_status_t));
 
         #ifdef SWITCHJOYCON_DBG
-          debugPort->print("[JoyCon] Add [" + String(((SWITCH_ID_JOYCON_LEFT == connResponse.identity.controllerType) ? "Left" : "Right")) + "], ");
-
-          debugPort->print("MAC");
+          debugPort->print("[JoyCon] Add [" + String(((SWITCH_TYPE_JOYCON_L == connResponse.identity.controllerType) ? "Left" : "Right")) + "], ");
+          debugPort->print("dAddr: " + String(dev_addr) + ", instance: " + String(dev_instance));
+          debugPort->print(", MAC");
           for (int i = 0; i < MAC_ADDR_NUM_OF_BYTES; i++)
           {
             debugPort->print(":");
@@ -362,14 +393,14 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
           debugPort->print("\n");
         #endif
         
-        if (SWITCH_ID_JOYCON_LEFT == connResponse.identity.controllerType)
+        if (SWITCH_TYPE_JOYCON_L == connResponse.identity.controllerType)
         {
           joyConIndex = JOYCON_IDX_LEFT;
-          joyCons[joyConIndex].controllerType = SWITCH_ID_JOYCON_LEFT;          
+          joyCons[joyConIndex].controllerType = SWITCH_TYPE_JOYCON_L;          
         } else 
-        if (SWITCH_ID_JOYCON_RIGHT == connResponse.identity.controllerType){
+        if (SWITCH_TYPE_JOYCON_R == connResponse.identity.controllerType){
           joyConIndex = JOYCON_IDX_RIGHT;
-          joyCons[joyConIndex].controllerType = SWITCH_ID_JOYCON_RIGHT;          
+          joyCons[joyConIndex].controllerType = SWITCH_TYPE_JOYCON_R;          
         }
 
         joyCon_clearLeftData();
@@ -379,7 +410,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
         joyCons[joyConIndex].dev_instance = dev_instance;
         joyCons[joyConIndex].present      = true;
         joyCons[joyConIndex].initState    = switch_controller_init_states();
-        if (SWITCH_ID_JOYCON_LEFT == connResponse.identity.controllerType)
+        if (SWITCH_TYPE_JOYCON_L == connResponse.identity.controllerType)
         {
           joyCons[joyConIndex].initState.homeLedSet = true; //left JoyCon doesn't have home LED, no need to initialize
         }
@@ -405,6 +436,9 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
           
           //reset joycon entity data structure
           joyCons[joyConIndex] = switchController_instance();
+
+          joyCon_clearLeftData();
+          joyCon_clearRightData();
           
           gripIsComplete = false;
           resetPlayerLed();
@@ -424,7 +458,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
         #ifdef SWITCHJOYCON_DBG
           debugPort->println("[" + controllerTypeDbgText + "] 2nd handshake successful");
         #endif
-        //switchController_sendHidCommand(SWITCH_USB_CMD_NO_TIMEOUT, dev_addr, dev_instance);
+        
         switchController_renewReport(&(joyCons[joyConIndex]));
       }
     } else 
@@ -483,7 +517,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
       joyCons[joyConIndex].isCharging = ((0x1 == (tempReport.powerState & 0x1)) ? true : false);
 
       #ifdef SWITCHJOYCON_DBG
-        debugPort->println("[" + controllerTypeDbgText + "]" + String(((0x1 == (tempReport.powerState & 0x1)) ? " Started charging" : "Stopped charging")));
+        debugPort->println("[" + controllerTypeDbgText + "] " + String(((0x1 == (tempReport.powerState & 0x1)) ? "Started charging" : "Stopped charging")));
       #endif
     }
 
@@ -497,11 +531,11 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
         String controllerTypeFromResponse = "";
         switch(tempReport.devInfo.controllerType)
         {
-          case SWITCH_ID_JOYCON_LEFT:
-            controllerTypeFromResponse = "JoyCon  Left";
+          case SWITCH_TYPE_JOYCON_L:
+            controllerTypeFromResponse = "JoyCon L";
             break;
-          case SWITCH_ID_JOYCON_RIGHT:
-            controllerTypeFromResponse = "JoyCon Right";
+          case SWITCH_TYPE_JOYCON_R:
+            controllerTypeFromResponse = "JoyCon R";
             break;
           case SWITCH_ID_PROCON:
             controllerTypeFromResponse = "Pro Controller";
@@ -574,6 +608,9 @@ void switchJoyCon_mount(uint8_t dev_addr, uint8_t instance)
     grip_devAddr = dev_addr;
     deviceActivity = false;
 
+    joyCon_clearLeftData();
+    joyCon_clearRightData();    
+
     if ( !tuh_hid_receive_report(dev_addr, instance) )
     {
       #ifdef SWITCHJOYCON_DBG
@@ -600,6 +637,9 @@ void switchJoyCon_umount(uint8_t dev_addr, uint8_t instance)
     grip_devAddr = 255;
     deviceActivity = false;
     joyCons[JOYCON_IDX_LEFT] = joyCons[JOYCON_IDX_RIGHT] = joyCons[JOYCON_IDX_PRO] = switchController_instance();
+
+    joyCon_clearLeftData();
+    joyCon_clearRightData();
   }
 }
 
@@ -648,8 +688,13 @@ void switchJoyCon_visualTick(holding_left_right holdState, uint8_t dev_addr, uin
 
     if (HOLDING_LEFT == holdState)
     {
-      joyCons[JOYCON_IDX_LEFT ].playerLedData = joyCon_playerLed[holdState][joyCon_ledOffset];
-      joyCons[JOYCON_IDX_RIGHT].playerLedData = defaultPlayerLed;
+      if (true == joyCons[JOYCON_IDX_LEFT].present)
+      {
+        joyCons[JOYCON_IDX_LEFT ].playerLedData = joyCon_playerLed[holdState][joyCon_ledOffset];
+        joyCons[JOYCON_IDX_RIGHT].playerLedData = defaultPlayerLed;
+      } else {
+        joyCons[JOYCON_IDX_RIGHT].playerLedData = joyCon_playerLed[holdState][joyCon_ledOffset];
+      }
     } else 
     if (HOLDING_RIGHT == holdState)
     {
@@ -688,8 +733,13 @@ void switchJoyCon_tactileTick(holding_left_right holdState, uint8_t dev_addr, ui
     if (HOLDING_LEFT == holdState)
     {
       rumbleStartTime = millis();
-      joyCons[JOYCON_IDX_LEFT ].rumbleData  = &(joyCon_rumbleArray[holdState][0]);
-      joyCons[JOYCON_IDX_RIGHT].rumbleData  = defaultRumbleData;
+      if (true == joyCons[JOYCON_IDX_LEFT].present)
+      {
+        joyCons[JOYCON_IDX_LEFT ].rumbleData  = &(joyCon_rumbleArray[holdState][0]);
+        joyCons[JOYCON_IDX_RIGHT].rumbleData  = defaultRumbleData;
+      } else {
+        joyCons[JOYCON_IDX_RIGHT].rumbleData  = &(joyCon_rumbleArray[HOLDING_RIGHT][0]);
+      }
     } else 
     if (HOLDING_RIGHT == holdState)
     {

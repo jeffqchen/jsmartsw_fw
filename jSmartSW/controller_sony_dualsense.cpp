@@ -5,7 +5,7 @@
 
 #include "mydebug.h"
 
-#include "tusb.h"
+//#include "tusb.h"
 #include <Arduino.h>
 
 #include "controller_sony_dualsense.h"
@@ -18,10 +18,10 @@
 
 extern game_controller_data immediateControllerData;
 
-uint8_t registeredDaddr = 0;
-uint8_t registeredInstance = 0;
-bool deviceMounted = false;
-bool deviceActivity = false;
+static uint8_t registeredDaddr = 0;
+static uint8_t registeredInstance = 0;
+static bool deviceMounted = false;
+static bool deviceActivity = false;
 
 controller_api_interface sony_dualSense_api = { &dualSense_mount,
                                                 &dualSense_umount,
