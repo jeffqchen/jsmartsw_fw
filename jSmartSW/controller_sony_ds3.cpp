@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 #include "controller_sony_ds3.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -24,7 +24,8 @@ controller_api_interface sony_ds3_api = { &ds3_mount,
                                           &ds3_setupTick,
                                           &ds3_visualTick,
                                           &ds3_tactileTick,
-                                          &ds3_executeTick
+                                          &ds3_executeTick,
+                                          &ds3_housekeepingRoutine
                                           };
 
 // Device
@@ -154,7 +155,7 @@ void process_sony_ds3(uint8_t const* report, uint16_t len, uint8_t dev_addr, uin
 ////////////////////////////////////////////////////
 //API functions
 
-void ds3_mount(uint8_t dev_addr, uint8_t instance)
+bool ds3_mount(uint8_t dev_addr, uint8_t instance)
 {
   // Sony DualShock3 Init
   if ( ds3_is_hardware(dev_addr) )
@@ -192,7 +193,11 @@ void ds3_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[DS3] Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void ds3_umount(uint8_t dev_addr, uint8_t instance)
@@ -356,3 +361,5 @@ void ds3_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t in
     }
   }
 }
+
+void ds3_housekeepingRoutine () {}

@@ -14,15 +14,17 @@
 
 #include <cstring>
 
-  //#define PICO_DBG
+  #define PICO_DBG
   //#define PWR_DEBUG
 
   //#define FLASH_DBG
   //#define FORCE_FLASH
   //#define INJECT_FAKE_DATA
 
-  //#define RT4K_DBG
-  //#define RT4K_PWR_DBG
+  //#define TINK_DBG
+  //#define TINK_UART_DBG
+  //#define TINK_STATE_DBG
+  //#define TINK_PWR_DBG
   //#define CDC_DBG
 
   //#define SIGNAL_IN_DBG
@@ -36,13 +38,14 @@
   //#define RGBLED_DBG
   //#define SCREEN_DBG
 
-  #define CONTROLLER_DBG
+  //#define CONTROLLER_DBG
+
   #ifdef CONTROLLER_DBG
-    //#define HID_DBG
+    #define HID_DBG
     
     //#define DS3_DBG
-    //#define DS4_DBG
-    //#define DS5_DBG
+    #define DS4_DBG
+    #define DS5_DBG
 
     //#define SWITCHLIB_DBG
     //#define SWCON_DBG
@@ -52,14 +55,19 @@
     //#define SW2_VERBOSE_DBG
 
     //#define SATURNUSB_DBG
+
+    //#define SFC8BITDO_DBG
+
     //#define KEYBOARD_DBG
     //#define MOUSE_DBG
   #endif
 
   //#define CONTROLLER_REPORT_DBG
+
   //Report filtering
   #ifdef CONTROLLER_REPORT_DBG   
     #define REPORT_FILTERING
+
     #ifdef REPORT_FILTERING
 
       #if defined(SWITCHLIB_DBG) || defined(SWCON_DBG)
@@ -84,9 +92,9 @@
         #define NO_SW2_REPORT
       #endif
       #ifdef NO_SW2_REPORT
-        //#define NO_JOYCON2_L_REPORT       && (0x7 != report[0])
+        #define NO_JOYCON2_L_REPORT       && (0x7 != report[0])
         #define NO_JOYCON2_R_REPORT       && (0x8 != report[0])
-        //#define NO_PROCON2_REPORT         && (0x9 != report[0])
+        #define NO_PROCON2_REPORT         && (0x9 != report[0])
       #endif
 
       //////defaults//////

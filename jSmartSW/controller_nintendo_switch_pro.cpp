@@ -14,7 +14,8 @@
 #include "mypico.h"
 #include "nintendo_swcon_lib.h"
 #include "controller_nintendo_switch_pro.h"
-#include "usb_controller.h"
+
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -65,7 +66,8 @@ controller_api_interface switchProCon_api =  {  &switchProCon_mount,
                                                 &switchProCon_setupTick,
                                                 &switchProCon_visualTick,
                                                 &switchProCon_tactileTick,
-                                                &switchProCon_executeTick
+                                                &switchProCon_executeTick,
+                                                &switchProCon_houskeepingRoutine
                                               };
 
 ////////////////////////////////////////////////////
@@ -613,7 +615,7 @@ void process_nintendo_switchProCon(uint8_t const* report, uint16_t len, uint8_t 
 ////////////////////////////////////////////////////
 //API functions
 
-void switchProCon_mount(uint8_t dev_addr, uint8_t instance)
+bool switchProCon_mount(uint8_t dev_addr, uint8_t instance)
 {
   //Nintendo Pro Controller
   if ( switchProCon_is_hardware(dev_addr) )
@@ -655,7 +657,11 @@ void switchProCon_mount(uint8_t dev_addr, uint8_t instance)
       output_report.cmd = SWITCH_USB_CMD_HANDSHAKE;
       while( tuh_hid_send_report(registeredDaddr, registeredInstance, SWITCH_OUTPUT_USB_CMD, &output_report, sizeof(output_report) ) ) ;
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void switchProCon_umount(uint8_t dev_addr, uint8_t instance)
@@ -768,8 +774,6 @@ void switchProCon_executeTick (holding_left_right holdState, uint8_t dev_addr, u
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void switchProCon_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void switchProCon_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
+void switchProCon_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void switchProCon_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void switchProCon_houskeepingRoutine() {}

@@ -1,5 +1,5 @@
 #include "supported_controllers.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifdef DEBUG
   extern HardwareSerial* debugPort;
@@ -20,6 +20,7 @@ extern controller_api_interface sw2_api;
 extern controller_api_interface saturn_usb_api;
 extern controller_api_interface psx2usb_api;
 extern controller_api_interface md2x_api;
+extern controller_api_interface retro_sfc_8bitdo_api;
 
 //empty entry required for controller entity array to exist
 controller_api_interface * controllerEntity[NUM_OF_API];
@@ -32,8 +33,11 @@ controller_api_interface empty_api = {&empty_mount,
                                       &empty_setupTick,
                                       &empty_visualTick,
                                       &empty_tactileTick,
-                                      &empty_executeTick
+                                      &empty_executeTick,
+                                      &empty_housekeepingRoutine
                                     };
+
+String controllerApiNameStringArray[NUM_OF_API] = {API_NAME_STRING_ARRAY};
 
 void controller_init_deviceRegister()
 {
@@ -59,39 +63,21 @@ void controller_init_deviceRegister()
   controllerEntity[API_ID_SATURN_USB] = &saturn_usb_api;
   controllerEntity[API_ID_PSX2USB]    = &psx2usb_api;
   controllerEntity[API_ID_MD2X]       = &md2x_api;
+
+  controllerEntity[API_ID_8BITDO_SFC] = &retro_sfc_8bitdo_api;
 }
 
 ////////////////////////////////////////////////////
 //API functions
 
-void empty_mount(uint8_t dev_addr, uint8_t instance)
-{}
-
-void empty_umount(uint8_t dev_addr, uint8_t instance)
-{}
-
-void empty_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void empty_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void empty_hid_report_received(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len)
-{}
-
-bool empty_has_activity()
-{
-  return false;
-}
-
-void empty_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void empty_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void empty_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void empty_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
+bool empty_mount(uint8_t dev_addr, uint8_t instance) {return false;}
+void empty_umount(uint8_t dev_addr, uint8_t instance) {}
+void empty_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void empty_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void empty_hid_report_received(uint8_t dev_addr, uint8_t instance, uint8_t const* report, uint16_t len) {}
+bool empty_has_activity() {return false;}
+void empty_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void empty_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void empty_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void empty_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void empty_housekeepingRoutine() {}

@@ -396,10 +396,7 @@ struct switchController_instance
     controllerType  = 0;
     dev_addr        = SWITCH_DEV_ADDR_UNDEFINED;
     dev_instance    = SWITCH_DEV_INSTANCE_UNDEFINED;
-    for (int i = 0; i < MAC_ADDR_NUM_OF_BYTES; i++)
-    {
-      macAddrLE[i] = 0;
-    }
+
     chargeLevel = 0;
     isCharging = false;
 
@@ -411,6 +408,8 @@ struct switchController_instance
     homeLedData = NULL;
     
     reportUpdated = false;
+
+    memset(macAddrLE, 0xff, MAC_ADDR_NUM_OF_BYTES);
   }
 };
 

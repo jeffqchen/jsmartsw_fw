@@ -9,7 +9,7 @@
 #include <Arduino.h>
 
 #include "controller_sony_dualsense.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -32,7 +32,8 @@ controller_api_interface sony_dualSense_api = { &dualSense_mount,
                                                 &dualSense_setupTick,
                                                 &dualSense_visualTick,
                                                 &dualSense_tactileTick,
-                                                &dualSense_executeTick
+                                                &dualSense_executeTick,
+                                                &dualSense_housekeeping
                                               };
 
 // Tick
@@ -52,7 +53,7 @@ bool dualSense_is_hardware(uint8_t dev_addr)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
 
-  return ( (vid == 0x054c && pid == 0x0ce6)     //DualSense!
+  return (  (vid == 0x054c && pid == 0x0ce6)      //DualSense over USB
          );
 }
 
@@ -89,11 +90,13 @@ void dualSense_defaultLedRumbleState()
   dualSense_output_report.set_right_trigger_motor = dualSense_output_report.set_left_trigger_motor  = 1;
   dualSense_output_report.right_trigger_mode = dualSense_output_report.left_trigger_mode  = 0x21;
 
-  const uint8_t triggerData[10] = { 0x09, 0x09,
-                                    0x03, 0x00, 0x00, 0x00,
-                                    0x00, 0x00, 0x00, 0x00  };
-  memcpy(&dualSense_output_report.right_trigger_forces, triggerData, 10);
-  memcpy(&dualSense_output_report.left_trigger_forces, triggerData, 10);
+  
+  #define TRIGGER_DATA_WIDTH  10
+  const uint8_t triggerDataTight[TRIGGER_DATA_WIDTH] = {  0x09, 0x09,
+                                                          0x03, 0x00, 0x00, 0x00,
+                                                          0x00, 0x00, 0x00, 0x00  };
+  //memcpy(&dualSense_output_report.right_trigger_forces, triggerDataTight, TRIGGER_DATA_WIDTH);
+  //memcpy(&dualSense_output_report.left_trigger_forces,  triggerDataTight, TRIGGER_DATA_WIDTH);
 
   dualSense_ledOffset = 0;
   numOfTicks = 0;
@@ -178,7 +181,7 @@ void process_sony_dualSense (uint8_t const* report, uint16_t len, uint8_t dev_ad
 ////////////////////////////////////////////////////
 //API functions
 
-void dualSense_mount(uint8_t dev_addr, uint8_t instance)
+bool dualSense_mount(uint8_t dev_addr, uint8_t instance)
 {
   //Sony DualSense
   if ( dualSense_is_hardware(dev_addr) )
@@ -208,7 +211,11 @@ void dualSense_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[DuSe]Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void dualSense_umount(uint8_t dev_addr, uint8_t instance)
@@ -299,8 +306,6 @@ void dualSense_executeTick (holding_left_right holdState, uint8_t dev_addr, uint
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void dualSense_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void dualSense_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
+void dualSense_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void dualSense_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void dualSense_housekeeping () {}

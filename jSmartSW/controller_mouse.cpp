@@ -5,7 +5,7 @@
 #include <Arduino.h>
 
 #include "controller_mouse.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -24,7 +24,8 @@ controller_api_interface mouse_api = {&mouse_mount,
                                       &mouse_setupTick,
                                       &mouse_visualTick,
                                       &mouse_tactileTick,
-                                      &mouse_executeTick
+                                      &mouse_executeTick,
+                                      &mouse_housekeepingRoutine
                                     };
 
 static uint8_t registeredDaddr = 0;
@@ -169,7 +170,7 @@ void process_mouse(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_
 ////////////////////////////////////////////////////
 //API functions
 
-void mouse_mount(uint8_t dev_addr, uint8_t instance)
+bool mouse_mount(uint8_t dev_addr, uint8_t instance)
 {
   if (mouse_is_hardware(dev_addr, instance))
   {
@@ -197,7 +198,11 @@ void mouse_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[Mouse] Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void mouse_umount(uint8_t dev_addr, uint8_t instance)
@@ -252,20 +257,10 @@ bool mouse_has_activity()
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void mouse_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void mouse_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void mouse_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void mouse_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void mouse_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void mouse_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
+void mouse_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void mouse_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void mouse_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void mouse_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void mouse_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void mouse_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void mouse_housekeepingRoutine () {}

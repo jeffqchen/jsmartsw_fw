@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include "host/usbh.h"
 #include "common/tusb_types.h"
 #include <sys/_stdint.h>
@@ -6,7 +7,7 @@
 #include <Arduino.h>
 
 #include "controller_nintendo_switch2.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -26,7 +27,8 @@ controller_api_interface sw2_api = {&sw2Con_mount,
                                     &sw2Con_setupTick,
                                     &sw2Con_visualTick,
                                     &sw2Con_tactileTick,
-                                    &sw2Con_executeTick
+                                    &sw2Con_executeTick,
+                                    &sw2Con_housekeepingRoutine
                                     };
 
 // Device
@@ -97,28 +99,28 @@ bool sw2Con_joyConComplete()
 }
 
 #ifdef SW2_DBG
-String sw2Con_typeToDbgName(int controllerType)
-{
-  if (SW2_TYPE_NOTSW2 != controllerType)
+  String sw2Con_typeToDbgName(int controllerType)
   {
-    if (SW2_TYPE_JOYCON_RIGHT == controllerType)
+    if (SW2_TYPE_NOTSW2 != controllerType)
     {
-      return "JoyCon2 R";
-    } else
-    if (SW2_TYPE_JOYCON_LEFT == controllerType)
-    {
-      return "JoyCon2 L";
-    } else 
-    if (SW2_TYPE_PROCON == controllerType)
-    {
-      return " Pro Con ";
-    } else {
-      return "JoyCon2 Unknown";
+      if (SW2_TYPE_JOYCON_RIGHT == controllerType)
+      {
+        return "JoyCon2 R";
+      } else
+      if (SW2_TYPE_JOYCON_LEFT == controllerType)
+      {
+        return "JoyCon2 L";
+      } else 
+      if (SW2_TYPE_PROCON == controllerType)
+      {
+        return " ProCon2 ";
+      } else {
+        return "JoyCon2 Unknown";
+      }
     }
-  }
 
-  return "Not JoyCon2";
-}
+    return "Not JoyCon2";
+  }
 #endif
 
 int sw2Con_controllerTypeToIndex(int controllerType)
@@ -142,6 +144,7 @@ int sw2Con_controllerTypeToIndex(int controllerType)
 void sw2Con_openEndpoints(uint8_t dev_addr)
 {
   tusb_desc_endpoint_t outEp;
+
   outEp.bLength             = 7;
   outEp.bDescriptorType     = TUSB_DESC_CS_ENDPOINT;
   outEp.bEndpointAddress    = SW2_ENDPOINT_ADDR_OUTPUT;
@@ -150,8 +153,21 @@ void sw2Con_openEndpoints(uint8_t dev_addr)
   outEp.bmAttributes.usage  = TUSB_ISO_EP_ATT_DATA;
   outEp.wMaxPacketSize      = 64;
   outEp.bInterval           = 0;
+  
+  tuh_edpt_open(dev_addr, &outEp);
+
+  /*
+  outEp.bLength             = 7;
+  outEp.bDescriptorType     = TUSB_DESC_CS_ENDPOINT;
+  outEp.bEndpointAddress    = SW2_ENDPOINT_ADDR_IN;
+  outEp.bmAttributes.xfer   = TUSB_XFER_BULK;  
+  outEp.bmAttributes.sync   = TUSB_ISO_EP_ATT_NO_SYNC;
+  outEp.bmAttributes.usage  = TUSB_ISO_EP_ATT_DATA;
+  outEp.wMaxPacketSize      = 64;
+  outEp.bInterval           = 0;
 
   tuh_edpt_open(dev_addr, &outEp);
+  */
 }
 
 inline uint8_t max(uint8_t number1, uint8_t number2)
@@ -168,7 +184,7 @@ bool sw2Con_sendOutputReport(uint8_t dev_addr, uint8_t cmdId, uint8_t subCmdId, 
   tuh_xfer_t newXfer;
   newXfer.daddr       = dev_addr;  
   newXfer.complete_cb = NULL; //sw2Con_responseReport;
-  newXfer.ep_addr     = SW2_ENDPOINT_ADDR_OUTPUT;  
+  newXfer.ep_addr     = SW2_ENDPOINT_ADDR_OUTPUT;
 
   uint8_t * buffer = (uint8_t *)malloc(SW2_CMD_SIZE + dataSize);
 
@@ -178,18 +194,22 @@ bool sw2Con_sendOutputReport(uint8_t dev_addr, uint8_t cmdId, uint8_t subCmdId, 
   tempReport.connType     = 0x0;
   tempReport.subCmdId     = subCmdId;
   tempReport.responseType = 0x0;
-  tempReport.argumentSize = max(SW2_CMD_ARGUMENT_SIZE_MAX, dataSize);
-  tempReport.dataSize     = 0;  
-  memcpy(buffer, &tempReport, SW2_CMD_SIZE);
+  tempReport.dataSize     = 0;
 
   if (NULL != cmdData)
   {
+    //tempReport.argumentSize = max(SW2_CMD_ARGUMENT_SIZE_MAX, dataSize);
+    tempReport.argumentSize = dataSize;
     memcpy(buffer + SW2_CMD_SIZE, cmdData, dataSize);
-  }  
+  } else {
+    tempReport.argumentSize = 0;
+  }
+
+  memcpy(buffer, &tempReport, SW2_CMD_SIZE);
   newXfer.buffer = buffer;
 
-  newXfer.actual_len = SW2_CMD_SIZE + dataSize;
-  newXfer.buflen = SW2_CMD_SIZE + max(SW2_CMD_ARGUMENT_SIZE_MAX, dataSize);
+  newXfer.actual_len = dataSize;
+  newXfer.buflen = SW2_CMD_SIZE + dataSize;
   
   while(!tuh_ready(dev_addr)) ;
   return tuh_edpt_xfer(&newXfer);
@@ -209,8 +229,77 @@ bool sw2Con_enableHidReport(switch2Controller_instance sw2Con)
     String sw2Con_dbgName = sw2Con_typeToDbgName(sw2Con_daddrToType(sw2Con.dev_addr));
     debugPort->println("[" + sw2Con_dbgName + "] Enabling HID report");
   #endif
+  
+  deviceActivity = true;
 
   return sw2Con_toggleHidReport(sw2Con, SW2_SUBCMD_TOGGLE_HID_ENABLE);
+}
+
+#ifdef SW2_DBG
+  bool sw2Con_testCmd(switch2Controller_instance * sw2Con)
+  {
+    #define SW2_CMD_CATEGORY_TEST_CMD     0x08
+    #define SW2_CMD_CATEGORY_TEST_SUBCMD  0x01
+    #define TEST_CMD_BUFFER_LEN   4
+
+    uint8_t *testBuf = NULL;
+
+    if (TEST_CMD_BUFFER_LEN > 0)
+    {
+      testBuf = (uint8_t *)malloc(TEST_CMD_BUFFER_LEN * sizeof(uint8_t));
+      memset(testBuf, 0, TEST_CMD_BUFFER_LEN);
+      testBuf[0] = 0x20;
+    }
+    
+    String sw2Con_dbgName = sw2Con_typeToDbgName(sw2Con_daddrToType(sw2Con->dev_addr));
+    debugPort->println("[" + sw2Con_dbgName + "] Test Cmd 0x" + String(SW2_CMD_CATEGORY_TEST_CMD, HEX) + ", SubCmd 0x" + String(SW2_CMD_CATEGORY_TEST_SUBCMD, HEX));
+    
+    return sw2Con_sendOutputReport(sw2Con->dev_addr, SW2_CMD_CATEGORY_TEST_CMD, SW2_CMD_CATEGORY_TEST_SUBCMD, testBuf, TEST_CMD_BUFFER_LEN);
+    //return true;
+  }
+#endif
+
+bool sw2Con_enableJoyconGButtons(switch2Controller_instance * sw2Con)
+{
+  nintendo_switch2_cmd_data_enable_joycon_g_buttons toggleData;
+  toggleData.toggle = SW2_JOYCON_G_BUTTONS_ENABLE;
+
+  #ifdef SW2_DBG
+    int controllerType = sw2Con_daddrToType(sw2Con->dev_addr);
+    String sw2Con_dbgName = sw2Con_typeToDbgName(controllerType);    
+    debugPort->println("[" + sw2Con_dbgName + "] Enable G button");
+  #endif
+
+  return sw2Con_sendOutputReport(sw2Con->dev_addr, SW2_CMD_CATEGORY_EXTRA_FEATURES, SW2_SUBCMD_ENABLE_JOYCON_G_BUTTONS, (uint8_t *)&toggleData, sizeof(nintendo_switch2_cmd_data_enable_joycon_g_buttons));
+}
+
+bool sw2Con_enableImu(switch2Controller_instance * sw2Con)
+{
+  nintendo_switch2_cmd_data_enable_imu tempData;
+
+  int controllerType = sw2Con_daddrToType(sw2Con->dev_addr);
+
+  switch(controllerType)
+  {
+    case SW2_TYPE_JOYCON_LEFT:
+      tempData.controllerId = SW2_INPUT_REPORT_ID_JOYCON_LEFT;
+      break;
+
+    case SW2_TYPE_JOYCON_RIGHT:
+      tempData.controllerId = SW2_INPUT_REPORT_ID_JOYCON_RIGHT;
+      break;
+
+    case SW2_TYPE_PROCON:
+      tempData.controllerId = SW2_INPUT_REPORT_ID_PROCON;
+      break;
+  }
+
+  #ifdef SW2_DBG
+    String sw2Con_dbgName = sw2Con_typeToDbgName(sw2Con_daddrToType(sw2Con->dev_addr));
+    debugPort->println("[" + sw2Con_dbgName + "] Enabling IMU Data with data 0x" + String(tempData.controllerId, HEX));
+  #endif
+
+  return sw2Con_sendOutputReport(sw2Con->dev_addr, SW2_CMD_CATEGORY_CONNECTION, SW2_SUBCMD_ENABLE_IMU, (uint8_t *)&tempData, sizeof(nintendo_switch2_cmd_data_enable_imu));
 }
 
 bool sw2Con_enableFullHidReport(switch2Controller_instance * sw2Con)
@@ -223,7 +312,7 @@ bool sw2Con_enableFullHidReport(switch2Controller_instance * sw2Con)
                               SW2_FEATURE_MASK_UNKNON_2     |
                               SW2_FEATURE_MASK_IMU          |
                               //SW2_FEATURE_MASK_UNKNON_4     |
-                              //SW2_FEATURE_MASK_MOUSE_INPUT  |                              
+                              SW2_FEATURE_MASK_MOUSE_INPUT  |                              
                               SW2_FEATURE_MASK_UNKNON_6     |
                               //SW2_FEATURE_MASK_UNKNON_7     |
                               //SW2_FEATURE_MASK_UNKNON_8     |
@@ -635,6 +724,36 @@ void sw2Con_applyControllerState(switch2Controller_instance * sw2Con)
   if (millis() - sw2Con->mountTime  > SW2_CMD_INITIAL_DELAY   &&
       millis() - lastCmdSendTime    > SW2_CMD_INTERVAL          )
   {
+    #ifdef SW2_DBG
+      if (false == sw2Con->initState.testCmd)
+      {
+        // Set full report mode
+        if (sw2Con_testCmd(sw2Con))
+        {
+          sw2Con->initState.testCmd = true;
+          lastCmdSendTime = millis();
+        }
+      } else
+    #endif
+
+    if (false == sw2Con->initState.gBttnsEnabled)
+    {
+      // Set full report mode
+      if (sw2Con_enableJoyconGButtons(sw2Con))
+      {
+        sw2Con->initState.gBttnsEnabled = true;
+        lastCmdSendTime = millis();
+      }
+    } else 
+    if (false == sw2Con->initState.imuEnabled)
+    {
+      // Set full report mode
+      if (sw2Con_enableImu(sw2Con))
+      {
+        sw2Con->initState.imuEnabled = true;
+        lastCmdSendTime = millis();
+      }
+    } else 
     if (false == sw2Con->initState.fullInputMode)
     {
       // Set full report mode
@@ -668,7 +787,7 @@ void sw2Con_applyControllerState(switch2Controller_instance * sw2Con)
 ////////////////////////////////////////////////////
 //API functions
 
-void sw2Con_mount(uint8_t dev_addr, uint8_t instance)
+bool sw2Con_mount(uint8_t dev_addr, uint8_t instance)
 {
   // JoyCon 2 Init
   if (sw2Con_is_hardware(dev_addr))
@@ -710,7 +829,11 @@ void sw2Con_mount(uint8_t dev_addr, uint8_t instance)
         sw2Con_vibarateJoyConComplete();
       }
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void sw2Con_umount(uint8_t dev_addr, uint8_t instance)
@@ -929,16 +1052,8 @@ void sw2Con_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t 
   }
 }
 
-void sw2Con_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{
-}
-
 // Unused API func
-
-void sw2Con_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{
-}
-
-void sw2Con_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{
-}
+void sw2Con_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void sw2Con_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void sw2Con_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void sw2Con_housekeepingRoutine() {}

@@ -5,7 +5,7 @@
 
 #include "rgbled_colorscheme.h"
 #include "gscartsw.h"
-#include "rt4k.h"
+#include "tinkComm.h"
 
 #ifndef RGBLED_H
 #define RGBLED_H
@@ -131,7 +131,7 @@ typedef struct
 #define SCAN_ANIMATION_FRAME_TIME   1500/(GSCARTSW_NUM_INPUTS)
 #define SCAN_STEPPING_RIGHT         1
 #define SCAN_STEPPING_LEFT          -1
-#define SCAN_FADE_STEPPING          3
+#define SCAN_FADE_STEPPING          6 
 #define SCAN_FADE_STEPPING_SLEEP    1
 
 typedef struct {

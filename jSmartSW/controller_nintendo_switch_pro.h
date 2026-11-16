@@ -2,7 +2,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_NINTENDO_SWITCH_PRO_H
 #define CONTROLLER_NINTENDO_SWITCH_PRO_H
@@ -55,7 +55,7 @@ struct switch_pro_init_states
 //function prototype
 
 //API
-void switchProCon_mount(uint8_t, uint8_t);
+bool switchProCon_mount(uint8_t, uint8_t);
 void switchProCon_umount(uint8_t, uint8_t);
 
 void switchProCon_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -68,6 +68,8 @@ void switchProCon_setupTick  (holding_left_right, uint8_t, uint8_t);
 void switchProCon_visualTick  (holding_left_right, uint8_t, uint8_t);
 void switchProCon_tactileTick(holding_left_right, uint8_t, uint8_t);
 void switchProCon_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void switchProCon_houskeepingRoutine();
 
 ///////////////////
 //bool switchProCon_setPlayerLedNum(const uint8_t*, const uint8_t*);

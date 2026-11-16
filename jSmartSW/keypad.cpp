@@ -4,7 +4,7 @@
 #include "mypico.h"
 #include "keypad.h"
 
-#include "rt4k.h"
+#include "tinkComm.h"
 
 //only for boot error procedures
 #include "screen.h"

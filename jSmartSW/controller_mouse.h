@@ -1,7 +1,8 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+//#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_MOUSE_H
 #define CONTROLLER_MOUSE_H
@@ -59,7 +60,7 @@ void mouse_timeout();
 //bool is_keyboard(uint8_t);
 void process_mouse(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void mouse_mount(uint8_t, uint8_t);
+bool mouse_mount(uint8_t, uint8_t);
 void mouse_umount(uint8_t, uint8_t);
 
 void mouse_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -73,5 +74,7 @@ void mouse_setupTick  (holding_left_right, uint8_t, uint8_t);
 void mouse_visualTick  (holding_left_right, uint8_t, uint8_t);
 void mouse_tactileTick(holding_left_right, uint8_t, uint8_t);
 void mouse_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void mouse_housekeepingRoutine();
 
 game_controller_data mouse_currentReading();

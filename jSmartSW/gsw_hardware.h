@@ -105,11 +105,11 @@
     RGBLED_INPUT_7,
     RGBLED_INPUT_8,
     RGBLED_SHIFT,
-    RGBLED_RT4K_PWR,
+    RGBLED_TINK_PWR,
     RGBLED_RES_4K,
     RGBLED_RES_1080P,
-    RGBLED_INPUT_HD15,
-    RGBLED_INPUT_SCART,
+    RGBLED_INPUT_PORT_HD15,
+    RGBLED_INPUT_PORT_SCART,
     RGBLED_DIMMER,
     RGBLED_AUTO,
     RGBLED_END
@@ -177,19 +177,18 @@
                               KEYPAD_VALUE_8_AUTO,    }
 
   //command messages to display under mode banner
-  #define COMMAND_TEXT_STRING_ARRAY { " ",      \
-                                      "SHIFT",  \
-                                      "WAKE",   \
-                                      "4K",     \
-                                      "1080P",  \
-                                      "HD15",   \
-                                      "SCART",  \
-                                      "DIM",    \
-                                      "AUTO"    }
+  #define COMMAND_TEXT_STRING_ARRAY " ",      \
+                                    "SHIFT",  \
+                                    "WAKE",   \
+                                    "4K",     \
+                                    "1080P",  \
+                                    "HD15",   \
+                                    "SCART",  \
+                                    "DIM",    \
+                                    "AUTO"
   
-  #define CONTROL_INTERFACE_NAME_STRING { "HD15", \
-                                          "USB-C" }
-
-#endif
+  #define CONTROL_INTERFACE_NAME_STRING   "HD15", \
+                                          "USB-C"
+  #endif
 
 #endif

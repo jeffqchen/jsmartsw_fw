@@ -5,7 +5,7 @@
 //#include "tusb.h"
 //#include "tusb_config.h"
 
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "mypico.h"
 
 #include "supported_controllers.h"
@@ -16,6 +16,7 @@
 #endif
 
 extern controller_api_interface * controllerEntity[];
+extern String controllerApiNameStringArray[];
 
 game_controller_data immediateControllerData, storedControllerData;
 unsigned long lastReportUpdateTime = 0;
@@ -82,7 +83,7 @@ void tuh_hid_set_report_complete_cb(uint8_t dev_addr, uint8_t instance, uint8_t 
 {
   for (int i = 0; i < NUM_OF_API; i++)
   {
-    controllerEntity[i]->hid_set_report_complete(dev_addr, instance, report_id, report_type, len);
+    controllerEntity[i]->hid_set_report_complete_cb(dev_addr, instance, report_id, report_type, len);
   }
 }
 
@@ -91,7 +92,7 @@ void tuh_hid_get_report_complete_cb(uint8_t dev_addr, uint8_t instance, uint8_t 
 {
   for (int i = 0; i < NUM_OF_API; i++)
   {
-    controllerEntity[i]->hid_get_report_complete(dev_addr, instance, report_id, report_type, len);
+    controllerEntity[i]->hid_get_report_complete_cb(dev_addr, instance, report_id, report_type, len);
   }
 }
 /////////////////////////////////////////////////////////
@@ -101,18 +102,27 @@ void tuh_hid_mount_cb(uint8_t dev_addr, uint8_t instance, uint8_t const* desc_re
 {
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
-  
-  #ifdef HID_DBG
+  bool deviceWasHandled = false;
 
+  int i = 0;
+  for (; i < NUM_OF_API; i++)
+  {
+    deviceWasHandled = controllerEntity[i]->mount(dev_addr, instance);
+    if(true == deviceWasHandled) break;
+  }
+
+  #ifdef HID_DBG
     debugPort->println("---------------------------");
     debugPort->println("[HID Mount] dAddr: " + String(dev_addr) + ", instance: " + String(instance) + ", Vid: 0x" + String(vid, HEX) + ", Pid: 0x" + String(pid, HEX));
+       
+    if (deviceWasHandled)
+    {
+      debugPort->println("[HID Mount] Device was handled by " + controllerApiNameStringArray[i] + ".");
+    } else {
+      debugPort->println("[HID Mount] Device was not handled.");
+    }
     debugPort->println("---------------------------");
   #endif
-  
-  for (int i = 0; i < NUM_OF_API; i++)
-  {
-    controllerEntity[i]->mount(dev_addr, instance);
-  }
 }
 
 // Invoked when device with hid interface is un-mounted
@@ -121,16 +131,16 @@ void tuh_hid_umount_cb(uint8_t dev_addr, uint8_t instance)
   uint16_t vid, pid;
   tuh_vid_pid_get(dev_addr, &vid, &pid);
   
+  for (int i = 0; i < NUM_OF_API; i++)
+  {
+    controllerEntity[i]->umount(dev_addr, instance);
+  }
+
   #ifdef HID_DBG
     debugPort->println("---------------------------");
     debugPort->println("[HID Unmount] dAddr: " + String(dev_addr) + ", instance: " + String(instance) + ", Vid: 0x" + String(vid, HEX) + ", Pid: 0x" + String(pid, HEX));
     debugPort->println("---------------------------");
   #endif
-
-  for (int i = 0; i < NUM_OF_API; i++)
-  {
-    controllerEntity[i]->umount(dev_addr, instance);
-  }
 }
 
 // Invoked when received report from device via interrupt endpoint
@@ -231,4 +241,12 @@ game_controller_data controller_currentReading()
 void controller_tickReset()
 {
   controllerHoldTick = 0 + RUMBLE_TICK_ADJUST_VALUE;
+}
+
+void controller_housekeepingRoutine()
+{
+  for (int i = 0; i < NUM_OF_API; i++)
+  {
+    controllerEntity[i]->housekeepingRoutine();
+  }
 }

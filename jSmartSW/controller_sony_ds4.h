@@ -1,7 +1,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_SONY_DS4_H
 #define CONTROLLER_SONY_DS4_H
@@ -15,6 +15,7 @@ TU_ATTR_BIT_FIELD_ORDER_BEGIN
 
 typedef struct TU_ATTR_PACKED
 {
+  // Basic data
   //byte 1-4
   uint8_t x, y, z, rz; // joystick
 
@@ -51,6 +52,37 @@ typedef struct TU_ATTR_PACKED
   uint8_t l2_trigger; // 0 released, 0xff fully pressed
   uint8_t r2_trigger; // as above
 
+  // Extended data
+  // State data
+  uint16_t  time_stamp;
+  uint8_t   temperature;
+  uint16_t  angular_velocity_x;
+  uint16_t  angular_velocity_y;
+  uint16_t  angular_velocity_z;
+  uint16_t  accelerometer_x;
+  uint16_t  accelerometer_y;
+  uint16_t  accelerometer_z;
+  uint8_t   ext_data[5];
+
+  //byte 29
+  uint8_t   power_percent       :4;
+
+  uint8_t   plugged_power_cable :1;
+  uint8_t   plugged_headphone   :1;
+  uint8_t   plugged_mic         :1;
+  uint8_t   plugged_ext         :1;
+
+  //byte 30
+  uint8_t   unknown_ext1          :1;
+  uint8_t   unknown_ext2          :1;
+  uint8_t   dongle_not_connected  :1;
+  uint8_t   unknown_1             :5;
+
+  //byte 31
+  uint8_t   unknown_2;
+
+  //byte 32
+  uint8_t   touch_count;
 } sony_ds4_report_t;
 
 typedef struct TU_ATTR_PACKED {
@@ -84,7 +116,13 @@ typedef struct TU_ATTR_PACKED {
   uint8_t volume_speaker;
 
   uint8_t other[9];
-} sony_ds4_output_report_5_t;
+} sony_ds4_output_report_set_controller_state_t;
+
+typedef struct TU_ATTR_PACKED {
+  //uint8_t report_id;
+  uint8_t data;
+  uint8_t padding[15];
+} sony_ds4_feature_report_t;
 
 TU_ATTR_PACKED_END
 TU_ATTR_BIT_FIELD_ORDER_END
@@ -102,9 +140,9 @@ enum {
 #define NUM_OF_DS4_DEVICES  DS4_END
 
 #define DS4_SONY_VID                0x054C
-  #define DS4_SONY_DS4_1            0x05C4
-  #define DS4_SONY_DS4_2            0x09CC
-  #define DS4_SONY_ADAPTER_PID      0x0BA0
+  #define DS4_SONY_DS4_1            0x05C4 // DualShock 4 Type 1
+  #define DS4_SONY_DS4_2            0x09CC // DualShock 4 Type 2
+  #define DS4_SONY_ADAPTER_PID      0x0BA0 // DualShock4 Wireless Adapter
 
 #define DS4_HORI_VID                0x0F0D
   #define DS4_HORI_FC4_PID          0x005E
@@ -113,12 +151,12 @@ enum {
 #define DS4_ASW_VID                 0x1F4F
   #define DS4_ASW_GG_XRD_PID        0x1002
 
-#define DS4_VID_PID_ARRAY           { {DS4_SONY_VID, DS4_SONY_DS4_1},           \
-                                      {DS4_SONY_VID, DS4_SONY_DS4_2},           \
-                                      {DS4_SONY_VID, DS4_SONY_ADAPTER_PID},     \
-                                      {DS4_HORI_VID, DS4_HORI_FC4_PID},         \
-                                      {DS4_HORI_VID, DS4_HORI_PS4_MINI_PID},    \
-                                      {DS4_ASW_VID , DS4_ASW_GG_XRD_PID}        }
+#define DS4_VID_PID_ARRAY           {DS4_SONY_VID, DS4_SONY_DS4_1},           \
+                                    {DS4_SONY_VID, DS4_SONY_DS4_2},           \
+                                    {DS4_SONY_VID, DS4_SONY_ADAPTER_PID},     \
+                                    {DS4_HORI_VID, DS4_HORI_FC4_PID},         \
+                                    {DS4_HORI_VID, DS4_HORI_PS4_MINI_PID},    \
+                                    {DS4_ASW_VID , DS4_ASW_GG_XRD_PID}
 
 typedef struct
 {
@@ -126,13 +164,19 @@ typedef struct
   uint16_t pid;
 } device_id_entry;
 
-#define DS4_OUTPUT_REPORT_5 0x5
+#define DS4_INPUT_REPORT      0x1
+#define DS4_FEATURE_REPORT    0x3
+  #define DS4_DONGLE_SHUTDOWN   0xe2
+#define DS4_OUTPUT_REPORT_SET_CONTROLLER_STATE  0x5
 
 typedef struct {
   int red;
   int green;
   int blue;
 } ds4_light_bar_color;
+
+#define DS4_DONGLE_CONTROLLER_CONNECTED 0
+#define DS4_DONGLE_CONTROLLER_NOT_CONNECTED 1
 
 #define DS4_LIGHT_BAR_RGB_MIN       0
 #define DS4_LIGHT_BAR_RGB_MAX       255
@@ -141,6 +185,8 @@ typedef struct {
 #define DS4_LIGHT_BAR_FRACTION      2
 #define DS4_RGB_STEP 16
 
+#define DS4_IDLE_SHUTDOWN_TIME      5000 //300 seconds
+
 #endif
 
 //function prototypes
@@ -148,7 +194,7 @@ typedef struct {
 void ds4_defaultLedRumbleState();
 void process_sony_ds4(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void ds4_mount(uint8_t, uint8_t);
+bool ds4_mount(uint8_t, uint8_t);
 void ds4_umount(uint8_t, uint8_t);
 
 void ds4_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -161,3 +207,5 @@ void ds4_setupTick  (holding_left_right, uint8_t, uint8_t);
 void ds4_visualTick  (holding_left_right, uint8_t, uint8_t);
 void ds4_tactileTick(holding_left_right, uint8_t, uint8_t);
 void ds4_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void ds4_housekeepingRoutine();

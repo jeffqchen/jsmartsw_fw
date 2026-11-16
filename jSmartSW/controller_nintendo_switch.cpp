@@ -15,7 +15,7 @@
 #include "mypico.h"
 //#include "nintendo_switch_controller.h"
 #include "controller_nintendo_switch.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -33,7 +33,8 @@ controller_api_interface switchJoyCon_api = { &switchJoyCon_mount,
                                               &switchJoyCon_setupTick,
                                               &switchJoyCon_visualTick,
                                               &switchJoyCon_tactileTick,
-                                              &switchJoyCon_executeTick
+                                              &switchJoyCon_executeTick, 
+                                              &switchJoyCon_housekeepingRoutine
                                             };
 
 
@@ -596,7 +597,7 @@ static void joyCon_reportProcessor(uint8_t dev_addr, uint8_t dev_instance, uint8
 // API functions
 ////////////////////////////
 
-void switchJoyCon_mount(uint8_t dev_addr, uint8_t instance)
+bool switchJoyCon_mount(uint8_t dev_addr, uint8_t instance)
 {
   if (switchJoyCon_is_hardware(dev_addr))
   {
@@ -621,7 +622,10 @@ void switchJoyCon_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[JoyCon] Can receive report!");
       #endif
     }
+
+    return true;
   }
+  return false;
 }
 
 void switchJoyCon_umount(uint8_t dev_addr, uint8_t instance)
@@ -777,8 +781,6 @@ void switchJoyCon_executeTick (holding_left_right holdState, uint8_t dev_addr, u
 // Unused API
 /////////////////////////////////////////////
 
-void switchJoyCon_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void switchJoyCon_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
+void switchJoyCon_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void switchJoyCon_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void switchJoyCon_housekeepingRoutine() {}

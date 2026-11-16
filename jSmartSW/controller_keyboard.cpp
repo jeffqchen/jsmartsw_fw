@@ -4,7 +4,7 @@
 
 #include "mypico.h"
 #include "controller_keyboard.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -24,7 +24,8 @@ controller_api_interface keyboard_api = { &keyboard_mount,
                                           &keyboard_setupTick,
                                           &keyboard_visualTick,
                                           &keyboard_tactileTick,
-                                          &keyboard_executeTick
+                                          &keyboard_executeTick,
+                                          &keyboard_housekeepingRoutine
                                         };
 
 static uint8_t registeredDaddr = 0;
@@ -41,7 +42,14 @@ static unsigned long mouseLastDebounceTime = 0;
 ////////////////////////////////////////////////////
 bool keyboard_is_hardware(uint8_t dev_addr, uint8_t instance)
 {
-  bool result = false;
+  uint16_t vid, pid;
+  tuh_vid_pid_get(dev_addr, &vid, &pid);
+  bool result = false;  
+
+  //vid & pid blacklist
+  if (vid == 0x1209 && pid == 0xdb08) {
+    return false;
+  }
 
   if (1 == tuh_hid_interface_protocol(dev_addr, instance))
   {
@@ -81,7 +89,7 @@ void process_keyboard(uint8_t const* report, uint16_t len, uint8_t dev_addr, uin
 ////////////////////////////////////////////////////
 //API functions
 
-void keyboard_mount(uint8_t dev_addr, uint8_t instance)
+bool keyboard_mount(uint8_t dev_addr, uint8_t instance)
 {
   if ( keyboard_is_hardware(dev_addr, instance) )
   {
@@ -108,7 +116,11 @@ void keyboard_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[Keyboard] Can receive report!");
       #endif
     }
+  
+    return true;
   }
+
+  return false;
 }
 
 void keyboard_umount(uint8_t dev_addr, uint8_t instance)
@@ -145,30 +157,19 @@ bool keyboard_has_activity()
   return deviceActivity;
 }
 
-////////////////////////////////////////////////////
-// Not implemented api functions
-
-void keyboard_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void keyboard_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void keyboard_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void keyboard_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void keyboard_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void keyboard_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-////////////////////////////////////////////////////
-
 keyboard_data keyboard_currentReading()
 {
   return immediateKeyboardData;
 }
+
+////////////////////////////////////////////////////
+// Not implemented api functions
+
+void keyboard_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void keyboard_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void keyboard_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void keyboard_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void keyboard_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void keyboard_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void keyboard_housekeepingRoutine () {}
+////////////////////////////////////////////////////

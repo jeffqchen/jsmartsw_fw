@@ -5,10 +5,10 @@
 
 #include "mypico.h"
 #include "gscartsw.h"
-#include "rt4k.h"
+#include "tinkComm.h"
 
 #include "screen.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifdef DEBUG
   extern HardwareSerial* debugPort;
@@ -213,7 +213,7 @@ void routine_screenUpdate()
     funcTime = millis();
   #endif
 
-  //rt4k mascots
+  //tink mascots
   normalMode_screenComponent_mascots();
 
   //USB-C connection indicator
@@ -525,7 +525,7 @@ static void normalMode_inputElementInit(bitmap_element_entity *inputElement, int
 
 static void normalMode_screen_inputNumberOrRotationAnimation()
 {
-  unsigned int screenTargetInput = pico_getCurrentInput();
+  unsigned int screenTargetInput = pico_getCurrentGswInput();
   static int inputNumberPaneloffset = 0;
 
   bitmap_element_entity currentInputNumber, currentInputIcon;
@@ -691,12 +691,12 @@ static void normalMode_screenComponent_mascots()
     tinkySelect = TINKY_EAR_DOWN;
   }
   display->drawBitmap( MASCOT_SEPARATION_POS_Y - MELLY_WIDTH - MASCOT_SEPARATION_PIX_COUNT, MASCOT_BANNER_POS_Y,
-                      bitmap_rt4kMelly,
+                      bitmap_tinkMelly,
                       MELLY_WIDTH, MELLY_HEIGHT,
                       SSD1306_WHITE);
 
   display->drawBitmap( MASCOT_SEPARATION_POS_Y, MASCOT_BANNER_POS_Y,
-                      bitmap_rt4kTinky[tinkySelect],
+                      bitmap_tinkTinky[tinkySelect],
                       TINKY_WIDTH, TINKY_HEIGHT,
                       SSD1306_WHITE);
 }
@@ -751,7 +751,7 @@ static void normalMode_screenComponent_buttonCommand()
 
 static void normalMode_screenComponent_controlInterface()
 {
-  if (RT4K_UART_PORT_TYPE_USBC == rt4k_getConnection())
+  if (TINK_UART_PORT_TYPE_USBC == tink_getConnection())
   {
     display->drawBitmap(  HEART_POS_X, HEART_POS_Y,
                           bitmap_heart,

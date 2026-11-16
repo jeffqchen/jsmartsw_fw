@@ -1,7 +1,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_SEGA_SATURN_USB_H
 #define CONTROLLER_SEGA_SATURN_USB_H
@@ -46,7 +46,7 @@ TU_ATTR_BIT_FIELD_ORDER_END
 //bool is_saturn_usb(uint8_t);
 void process_saturn_usb(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void saturn_usb_mount(uint8_t, uint8_t);
+bool saturn_usb_mount(uint8_t, uint8_t);
 void saturn_usb_umount(uint8_t, uint8_t);
 
 void saturn_usb_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -59,3 +59,5 @@ void saturn_usb_setupTick  (holding_left_right, uint8_t, uint8_t);
 void saturn_usb_visualTick  (holding_left_right, uint8_t, uint8_t);
 void saturn_usb_tactileTick(holding_left_right, uint8_t, uint8_t);
 void saturn_usb_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void saturn_housekeepingRoutine();

@@ -970,7 +970,7 @@ static const uint8_t bitmap_bannerBg[2][MODE_BANNER_BG_BITMAP_SIZE] = {
 #define MELLY_WIDTH                   21
 #define MELLY_HEIGHT                  16
 #define MELLY_BITMAP_SIZE             48
-static const uint8_t bitmap_rt4kMelly[48] = {
+static const uint8_t bitmap_tinkMelly[48] = {
     // Melly (left)
     0x00, 0x02, 0x00, 
     0x00, 0x05, 0x00, 
@@ -997,7 +997,7 @@ enum {
 #define TINKY_WIDTH                   19
 #define TINKY_HEIGHT                  16
 #define TINKY_BITMAP_SIZE             48
-static const uint8_t bitmap_rt4kTinky[2][TINKY_BITMAP_SIZE] = {
+static const uint8_t bitmap_tinkTinky[2][TINKY_BITMAP_SIZE] = {
   // Tinky (right)
   {
     0x00, 0x00, 0x00, 

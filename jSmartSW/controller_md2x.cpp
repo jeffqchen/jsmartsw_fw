@@ -4,7 +4,7 @@
 
 #include "mypico.h"
 #include "controller_md2x.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -22,7 +22,8 @@ controller_api_interface md2x_api = { &md2x_mount,
                                       &md2x_setupTick,
                                       &md2x_visualTick,
                                       &md2x_tactileTick,
-                                      &md2x_executeTick
+                                      &md2x_executeTick,
+                                      &md2x_housekeepingRoutine
                                     };
 
 static uint8_t registeredDaddr = 0;
@@ -97,7 +98,7 @@ void process_md2x(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_t
 
   // shoulder buttons
   //immediateControllerData.button_l1 |= ;
-  immediateControllerData.button_r1 |= md2x_input_report.button_mode;;
+  immediateControllerData.button_r1 |= immediateControllerData.button_r2 |= md2x_input_report.button_mode;
 
   //analog stick buttons
   immediateControllerData.button_l3 |= md2x_input_report.button_c;
@@ -109,7 +110,7 @@ void process_md2x(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint8_t
 ////////////////////////////////////////////////////
 //API functions
 
-void md2x_mount(uint8_t dev_addr, uint8_t instance)
+bool md2x_mount(uint8_t dev_addr, uint8_t instance)
 {
   // MD2x Init
   if ( md2x_is_hardware(dev_addr) )
@@ -140,7 +141,11 @@ void md2x_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[MD2X] Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void md2x_umount(uint8_t dev_addr, uint8_t instance)
@@ -172,20 +177,10 @@ bool md2x_has_activity()
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void md2x_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void md2x_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void md2x_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void md2x_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void md2x_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void md2x_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
+void md2x_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void md2x_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void md2x_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void md2x_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void md2x_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void md2x_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void md2x_housekeepingRoutine() {}

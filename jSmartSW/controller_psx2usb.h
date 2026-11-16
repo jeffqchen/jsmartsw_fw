@@ -8,7 +8,7 @@ https://github.com/jeffqchen/PSX2USB_hardware
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_PSX2USB_H
 #define CONTROLLER_PSX2USB_H
@@ -59,7 +59,7 @@ TU_ATTR_BIT_FIELD_ORDER_END
 
 //bool is_psx2usb(uint8_t);
 
-void psx2usb_mount(uint8_t, uint8_t);
+bool psx2usb_mount(uint8_t, uint8_t);
 void psx2usb_umount(uint8_t, uint8_t);
 
 void psx2usb_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -72,3 +72,5 @@ void psx2usb_setupTick  (holding_left_right, uint8_t, uint8_t);
 void psx2usb_visualTick  (holding_left_right, uint8_t, uint8_t);
 void psx2usb_tactileTick(holding_left_right, uint8_t, uint8_t);
 void psx2usb_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void psx2usb_housekeepingRoutine ();

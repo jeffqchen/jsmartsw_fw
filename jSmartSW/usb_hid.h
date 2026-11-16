@@ -2,12 +2,12 @@
 #include <sys/types.h>
 #include <sys/_stdint.h>
 
-#include <Adafruit_TinyUSB.h>
+#include <Adafruit_TinyUSB.h> 
 
 #include "mypico.h"
 
-#ifndef USB_CONTROLLER_H
-#define USB_CONTROLLER_H
+#ifndef USB_HID_H
+#define USB_HID_H
 
 //Tick action related
 typedef enum
@@ -34,7 +34,8 @@ enum {
   CONTROLLER_8BITDO_M30,
   CONTROLLER_SATURN_USB,
   CONTROLLER_PSX2USB,
-  CONTROLLER_MD2X
+  CONTROLLER_MD2X,
+  CONTROLLER_8BITDO_RETRO_SFC
 };
 
 //mapped controller reading
@@ -77,7 +78,7 @@ typedef struct _game_controller_data {
 
   int controllerType;
 
-  _game_controller_data() 
+  _game_controller_data()
   {
     dpad_up = dpad_down = dpad_left = dpad_right = apad_north = apad_south = apad_east = apad_west = button_start = button_select = button_home = button_l1 = button_r1 = button_l2 = button_r2 = button_l3 = button_r3 = button_touchPadButton = hasActivity = false;
     controllerType = CONTROLLER_NONE;
@@ -102,11 +103,11 @@ typedef struct _keyboard_data {
 #define keyboard_data()   _keyboard_data()
 
 typedef struct {
-  void (*mount) (uint8_t, uint8_t);
+  bool (*mount) (uint8_t, uint8_t);
   void (*umount)(uint8_t, uint8_t);
 
-  void (*hid_set_report_complete) (uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
-  void (*hid_get_report_complete) (uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
+  void (*hid_set_report_complete_cb) (uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
+  void (*hid_get_report_complete_cb) (uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
   void (*hid_report_received)     (uint8_t, uint8_t, uint8_t const*, uint16_t);
 
   bool (*hasActivity)();
@@ -115,6 +116,8 @@ typedef struct {
   void (*visualTick)  (holding_left_right, uint8_t, uint8_t);
   void (*tactilelTick)(holding_left_right, uint8_t, uint8_t);
   void (*executeTick) (holding_left_right, uint8_t, uint8_t);
+
+  void (*housekeepingRoutine) (); 
 } controller_api_interface;
 
 #endif
@@ -128,6 +131,8 @@ void controller_tickReset();
 void controller_holdLeftRightRumbleTick(holding_left_right, uint8_t, uint8_t);
 //void controller_holdLeftRightRumbleTick(holding_left_right, unsigned int);
 bool controller_supportsTick(const game_controller_data);
+
+void controller_housekeepingRoutine();
 //void controller_resetTickVariables();
 
 //internal

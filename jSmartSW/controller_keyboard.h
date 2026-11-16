@@ -2,7 +2,7 @@
 //#include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_KEYBOARD_H
 #define CONTROLLER_KEYBOARD_H
@@ -34,7 +34,7 @@ TU_ATTR_BIT_FIELD_ORDER_END
 //bool is_keyboard(uint8_t);
 void process_keyboard(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void keyboard_mount(uint8_t, uint8_t);
+bool keyboard_mount(uint8_t, uint8_t);
 void keyboard_umount(uint8_t, uint8_t);
 
 void keyboard_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -48,5 +48,7 @@ void keyboard_setupTick  (holding_left_right, uint8_t, uint8_t);
 void keyboard_visualTick  (holding_left_right, uint8_t, uint8_t);
 void keyboard_tactileTick(holding_left_right, uint8_t, uint8_t);
 void keyboard_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void keyboard_housekeepingRoutine();
 
 keyboard_data keyboard_currentReading();

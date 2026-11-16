@@ -6,17 +6,16 @@
 #include "hardware/flash.h"
 
 #include "mypico.h"
-
-#include "rt4k.h"
+#include "tinkComm.h"
 #include "rgbled.h"
-#include "usb_host.h"
 #include "screen.h"
 #include "keypad.h"
-#include "usb_controller.h"
+#include "usb_hid.h" 
 #include "supported_controllers.h"
 
 #ifdef DEBUG
-  extern HardwareSerial* debugPort;
+  SerialPIO PICO_DEBUG_SERIAL_PORT(PICO_DEBUG_UART_TX, PICO_DEBUG_UART_RX);
+  SerialPIO* debugPort = &PICO_DEBUG_SERIAL_PORT;
 #endif
 
 //core synchronization
@@ -38,8 +37,8 @@ static unsigned long lastPicoLedToggleTime = 0;
 static unsigned int gswMode = GSW_MODE_AUTO;  // Default running state = AUTO
 
 //// gscartsw input management
-static unsigned int newInput = NO_INPUT;
-static unsigned int currentInput = NO_INPUT;
+static unsigned int gswNewInput = NO_INPUT;
+static unsigned int gswCurrentInput = NO_INPUT;
 
 // energy saver
 static unsigned int picoPowerState = PICO_POWER_STATE_AWAKE;
@@ -66,8 +65,8 @@ static keyboard_data currentKeyboardData, previousKeyboardData;
 static int currentActiveControl = CONTROLLER_NONE;
 
 // command text to display on OLED screen
-static String commandText[(int)PHY_BUTTON_END+1] = COMMAND_TEXT_STRING_ARRAY;
-static String inputText[2] = CONTROL_INTERFACE_NAME_STRING;
+static String commandText[(int)PHY_BUTTON_END+1] = {COMMAND_TEXT_STRING_ARRAY};
+static String inputText[2] = {CONTROL_INTERFACE_NAME_STRING};
 
 // Setup mode
 static unsigned int setupModeInput = NO_INPUT;
@@ -149,6 +148,30 @@ static bool setupMode_initialEnter = true;
 // Setup for different cores
 void jsmartsw_core1Setup()
 {
+#ifdef DEBUG
+  debugPort->begin(PICO_DEBUG_BAUD_RATE, PICO_DEBUG_UART_CONFIG);
+  
+  //debugPort = &Serial3;
+
+  debugPort->println("\n=[ jSmartSW Debug ]=");
+  debugPort->flush();
+
+  if (watchdog_enable_caused_reboot())
+  {
+    debugPort->println("[JSW_DBG] Last restarted by Watchdog_Enable");
+    debugPort->flush();
+  }
+
+  if (watchdog_caused_reboot())
+  {
+    debugPort->println("[JSW_DBG] Last restarted by Watchdog");
+    debugPort->flush();
+  }
+
+  debugPort->println("[JSW_DBG] Starting initialization...");
+  debugPort->flush();
+#endif
+
   ///////////////////////////////////////////
   // Hardware Init
   ///////////////////////////////////////////
@@ -156,7 +179,12 @@ void jsmartsw_core1Setup()
   ////Pico Built-in LED Init
   picoLedInit();
   // Pico built-in uart0 init
-  rt4k_uartInit();
+  tink_uartInit();
+
+#ifdef TINK_MONITOR_STATUS
+  // Register the hardware UART interrupt to core
+  tink_uartInterruptRegister();
+#endif  
 
   //Read save data from flash
   readSaveDataFromFlash();
@@ -198,12 +226,12 @@ void jsmartsw_core1Setup()
 
   pico_setMainProgramMode(JSMARTSW_POST_BOOT);
 
-  core1SetupFinish = true;
-
   #ifdef DEBUG
-    debugPort->println("[JSW] Complete!");
+    debugPort->println("[JSW_DBG] Complete!");
     debugPort->flush();
   #endif
+
+  core1SetupFinish = true;
 }
 
 void jsmartsw_core2Setup()
@@ -226,15 +254,20 @@ void jsmartsw_core1Loop()
 
   ///////////////////////////////////////////////
 
+  routine_tinkCommunication();
+
+  ///////////////////////////////////////////////
+
   routine_keypad();
   routine_controller();
-  routine_keyboard();
+  routine_keyboard();  
+
+  ///////////////////////////////////////////////
 
   if (JSMARTSW_NORMAL_MODE == mainProgramMode ||
       JSMARTSW_POST_BOOT   == mainProgramMode )
   {
-    routine_gswInputUpdate();  // RT4K input change
-    routine_rt4kCommunication();
+    routine_gswInputUpdate();  // RT4K input change    
   } else if (JSMARTSW_SETUP_MODE == mainProgramMode)
   {
     energySaverEnabled = false;
@@ -260,15 +293,16 @@ void jsmartsw_core1Loop()
   //check and write data if necessary
   routine_writeSaveDataToFlash();
 
-  /*
+  
   //Feed the dog
+  /*
   if (true == core2LoopFinished)
   {
     watchdog_update();
     core2LoopFinished = false;
   }
   */
-   watchdog_update();
+  watchdog_update();
 }
 
 void jsmartsw_core2Loop()
@@ -307,7 +341,7 @@ void jsmartsw_core2Loop()
     loopTime2 = millis();
   #endif
 
-  routine_usbHostFtdi();
+  routine_usbHost();
 
   #ifdef SECOND_LOOP_TIMING_DBG
     timingMsg2 += "<< Loop2 >> " + String(millis() - loopTime2) + "\t";
@@ -331,10 +365,10 @@ static void routine_gswInputUpdate()
 
     if (true == isAutoModeDisabled())
     {
-      newInput = NO_INPUT;  // if auto mode is disabled physically
+      gswNewInput = NO_INPUT;  // if auto mode is disabled physically
                             // don't waste time on query an just spit out NO INPUT
     } else {
-      newInput = gsw_queryInput();
+      gswNewInput = gsw_queryInput();
     }
 
     // Cosmetic stuff
@@ -342,26 +376,26 @@ static void routine_gswInputUpdate()
   }
 
   // Input change detection prodecure
-  if ((newInput != currentInput) || ((NO_INPUT == currentInput) && (NO_INPUT != newInput)))
+  if ((gswNewInput != gswCurrentInput) || ((NO_INPUT == gswCurrentInput) && (NO_INPUT != gswNewInput)))
   {
     #ifdef PICO_DBG
-      debugPort->println("[PICO] Current Mode: " + String((GSW_MODE_AUTO == gswMode)? "Auto":"Manual"));
-      debugPort->println("[PICO] Old input: " + String(currentInput));
-      debugPort->println("[PICO] New input: " + String(newInput));
+      debugPort->println("[PICO] Current GSW Mode: " + String((GSW_MODE_AUTO == gswMode)? "Auto":"Manual"));
+      debugPort->println("[PICO] Old SVS Input: " + String(gswCurrentInput));
+      debugPort->println("[PICO] New SVS Input: " + String(gswNewInput));
     #endif
 
     //Manual mode - write input selection to gsw EXT pins for ONCE
     if (GSW_MODE_MANUAL == gswMode)
     {
       #ifdef PICO_DBG
-        debugPort->println("[PICO] Writing input: " + String(newInput));
+        debugPort->println("[PICO] Writing SVS Input: " + String(gswNewInput));
       #endif
-      gsw_writeInput(newInput);
+      gsw_writeInput(gswNewInput);
     }
 
-    rt4k_inputChange(newInput);
+    tink_svsInputChange(gswNewInput);
   }
-  currentInput = newInput;
+  gswCurrentInput = gswNewInput;
 }
 
 void pico_setMainProgramMode(int newMode)
@@ -379,21 +413,21 @@ unsigned int pico_getGswMode()
   return gswMode;
 }
 
-unsigned int pico_getCurrentInput()
+unsigned int pico_getCurrentGswInput()
 {
-  return currentInput;
+  return gswCurrentInput;
 }
 
-void pico_setNewInput(unsigned int inputNumber)
+void pico_setNewGswInput(unsigned int inputNumber)
 {
   if (inputNumber < INPUT_LOWEST)
   {
-    newInput = INPUT_HIGHEST;
+    gswNewInput = INPUT_HIGHEST;
   } else if (inputNumber > INPUT_HIGHEST)
   {
-    newInput = INPUT_LOWEST;
+    gswNewInput = INPUT_LOWEST;
   } else {
-    newInput = inputNumber;
+    gswNewInput = inputNumber;
   }
 }
 
@@ -415,7 +449,7 @@ static bool isAutoModeDisabled()
 static void gswMode_changeToAuto()
 {
   // command text to display on OLED screen
-  String commandText[BUTTON_COUNT+1] = COMMAND_TEXT_STRING_ARRAY;
+  //String commandText[BUTTON_COUNT+1] = COMMAND_TEXT_STRING_ARRAY;
 
   if (false == pico_getGswMode())
   {
@@ -431,8 +465,8 @@ static void gswMode_changeToManual()
 {
   gswMode = GSW_MODE_MANUAL;
   gsw_setModeManual();        //Change switch running mode by setting the EXT pin
-  gsw_writeInput(newInput);   //Write new input in right away
-  rt4k_inputChange(newInput); //Send input change request to RT4K anyway
+  gsw_writeInput(gswNewInput);   //Write new input in right away
+  tink_svsInputChange(gswNewInput); //Send input change request to RT4K anyway
 }
 
 static void cycleGswInputDown()
@@ -455,9 +489,9 @@ static void cycleGswInput(bool goUp)
 
   if (true == goUp)
   {
-    pico_setNewInput(currentInput + 1);
+    pico_setNewGswInput(gswCurrentInput + 1);
   } else {
-    pico_setNewInput(currentInput - 1);
+    pico_setNewGswInput(gswCurrentInput - 1);
   }
 
   pico_ledSetPeriod(PICO_LED_DELAY_MANUAL);
@@ -565,25 +599,25 @@ static void routine_keypad()
             #ifdef GSCARTSW_VER_5_2
               ////////////////// General user button combination functions //////////////////
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_2_WAKE:     //1+2 = Toggle RT4K Power
-                rt4k_cmdPowerToggle();
+                tink_cmdPowerToggle();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_2 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_3_4K:      //button 1+3 = Change to 4K resolution
-                rt4k_cmdRes4k();
+                tink_cmdRes4k();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_3 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_4_1080P:   //button 1+4 = Change to 1080p resolution
-                rt4k_cmdRes1080p();
+                tink_cmdRes1080p();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_4 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_5_HD15:    //button 1+5 = Switch RT4K input to HD15 RGBS
                 // Waiting for Mike to implement
-                rt4k_cmdInputHD15();
+                tink_cmdInputHD15();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_5 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_6_SCART:   //button 1+6 = Switch RT4K input to SCART RGBS
                 // Waiting for Mike to implement
-                rt4k_cmdInputSCART();
+                tink_cmdInputSCART();
                 screen_setCommandTextUpdate(commandText[PHY_BUTTON_6 + 1], 0);
                 break;
               case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_7_DIMMER:  //button 1+7 = Cycle LED brightness
@@ -616,7 +650,7 @@ static void routine_keypad()
                   // if real input change is requested, write input right now
                   if ((temporaryInput >= INPUT_LOWEST ) && (temporaryInput <= INPUT_HIGHEST))
                   {
-                    pico_setNewInput(temporaryInput);
+                    pico_setNewGswInput(temporaryInput);
                     //if currently in AUTO mode, transition to manual mode
                     if (GSW_MODE_AUTO == pico_getGswMode())
                     {
@@ -637,25 +671,25 @@ static void routine_keypad()
           #ifdef GSCARTSW_VER_5_2
             // ------------ button combination cases
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_2_WAKE:     //1+2 = Toggle RT4K Power
-              rt4k_cmdPowerToggle();
+              tink_cmdPowerToggle();
               screen_setCommandTextUpdate(commandText[2], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_3_4K:    //button 1+3 = Change to 4K resolution
-              rt4k_cmdRes4k();
+              tink_cmdRes4k();
               screen_setCommandTextUpdate(commandText[3], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_4_1080P:    //button 1+4 = Change to 1080p resolution
-              rt4k_cmdRes1080p();
+              tink_cmdRes1080p();
               screen_setCommandTextUpdate(commandText[4], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_5_HD15:    //button 1+5 = Switch RT4K input to HD15 RGBS
               // Waiting for Mike to implement
-              rt4k_cmdInputHD15();
+              tink_cmdInputHD15();
               screen_setCommandTextUpdate(commandText[5], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_6_SCART:    //button 1+6 = Switch RT4K input to SCART RGBS
               // Waiting for Mike to implement
-              rt4k_cmdInputSCART();
+              tink_cmdInputSCART();
               screen_setCommandTextUpdate(commandText[6], 0);
               break;
             case KEYPAD_VALUE_1_SHIFT|KEYPAD_VALUE_7_DIMMER:    //button 1+7 = Cycle LED brightness
@@ -847,42 +881,45 @@ static void routine_controller()
     if (JSMARTSW_NORMAL_MODE == mainProgramMode)
     {
       //process dpad. Do up & down first so accidental left/right input will be ignored
-      if (currentControllerData.dpad_up   ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_UP));}
-      if (currentControllerData.dpad_down ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DOWN));}
-      if (currentControllerData.dpad_right) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_RIGHT));}
-      if (currentControllerData.dpad_left ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_LEFT));}
+      if (currentControllerData.dpad_up   ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_UP));}
+      if (currentControllerData.dpad_down ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_DOWN));}
+      if (currentControllerData.dpad_right) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_RIGHT));}
+      if (currentControllerData.dpad_left ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_LEFT));}
 
-      if (currentControllerData.apad_north) {rt4k_cycleQuickTabsIncrease();}
-      if (currentControllerData.apad_west ) {rt4k_cycleQuickTabsDecrease();}
-      if (currentControllerData.apad_south) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_OK));}
-      if (currentControllerData.apad_east ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_BACK));}
+      if (currentControllerData.apad_north) {tink_cycleQuickTabsIncrease();}
+      if (currentControllerData.apad_west ) {tink_cycleQuickTabsDecrease();}
+      if (currentControllerData.apad_south) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_OK));}
+      if (currentControllerData.apad_east ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_BACK));}
 
-      if (currentControllerData.button_select ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DIAG));}
-      if (currentControllerData.button_start  ) {rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_MENU));}
+      if (currentControllerData.button_select ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_DIAG));}
+      if (currentControllerData.button_start  ) {tink_remoteButtonSingle(String(TINK_IR_REMOTE_MENU));}
 
-      if (currentControllerData.button_l1 ) {cycleGswInputDown();}
-      if (currentControllerData.button_r1 ) {cycleGswInputUp();}
+      if (currentControllerData.button_l2 || currentControllerData.button_r2)
+      {
+        if (currentControllerData.button_l1 ) {cycleGswInputDown();}
+        if (currentControllerData.button_r1 ) {cycleGswInputUp();}
+      }
 
       if (currentControllerData.button_l2 ) {}
       if (currentControllerData.button_r2 ) {}
 
       if (currentControllerData.button_l3) {gswMode_changeToAuto();}
-      #ifndef DEBUG
-      
+
+#ifndef DEBUG
       if (currentControllerData.button_r3)
       {
-        if (NO_INPUT != currentInput)
+        if (NO_INPUT != gswCurrentInput)
         {
-          setupModeInput = currentInput;
+          setupModeInput = gswCurrentInput;
           enterSetupMode();
         }
       }
 
       #else
         if (currentControllerData.button_r3) {pico_setSaveDataDirty();}
-      #endif
+#endif
 
-      if (currentControllerData.button_touchPadButton)  {rt4k_remoteButtonSingle( String(RT4K_IR_REMOTE_PROF));}
+      if (currentControllerData.button_touchPadButton)  {tink_remoteButtonSingle( String(TINK_IR_REMOTE_PROF));}
     } else if (JSMARTSW_SETUP_MODE == mainProgramMode)
     {
       // Directions
@@ -926,31 +963,31 @@ static void routine_controller()
         //process dpad hold
         if (currentControllerData.dpad_down)
         {
-          rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DOWN));
+          tink_remoteButtonSingle(String(TINK_IR_REMOTE_DOWN));
         } else
         if (currentControllerData.dpad_up)
         {
-          rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_UP));
+          tink_remoteButtonSingle(String(TINK_IR_REMOTE_UP));
         } else
         if (currentControllerData.dpad_right)
         {
-          rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_RIGHT));
+          tink_remoteButtonSingle(String(TINK_IR_REMOTE_RIGHT));
           controller_holdLeftRightRumbleTick(HOLDING_RIGHT, currentControllerData.dev_addr, currentControllerData.instance);
         } else
         if (currentControllerData.dpad_left)
         {
-          rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_LEFT));
+          tink_remoteButtonSingle(String(TINK_IR_REMOTE_LEFT));
           controller_holdLeftRightRumbleTick(HOLDING_LEFT, currentControllerData.dev_addr, currentControllerData.instance);
         }
 
         //allow holding the cancel button
         if (currentControllerData.apad_east)
         {
-          rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_BACK));
+          tink_remoteButtonSingle(String(TINK_IR_REMOTE_BACK));
         }
 
         //home button to turn on RT4K is a hold action
-        if (currentControllerData.button_home   ) { rt4k_remoteWakeFromSleep();
+        if (currentControllerData.button_home   ) { tink_remoteWakeFromSleep();
                                                     controllerInitialRepeatWait = millis();}
       } else if (JSMARTSW_SETUP_MODE == mainProgramMode)
       {
@@ -967,6 +1004,8 @@ static void routine_controller()
   }
 
   previousControllerData = currentControllerData;
+
+  controller_housekeepingRoutine();
 }
 
 ///////////////////
@@ -1004,7 +1043,7 @@ static void routine_keyboard()
         {
           case 0x2c:  //Space
           case 0x62:  //Numpad 0
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_MENU));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_MENU));
             break;
 
           case 0x2a:  //Backspace
@@ -1028,95 +1067,95 @@ static void routine_keyboard()
           case 0x2f:  // [
           case 0x4b:  //PgUp
           case 0x5f:  //Numpad 7
-            rt4k_cycleQuickTabsDecrease();
+            tink_cycleQuickTabsDecrease();
             break;
 
           case 0x30:  // ]
           case 0x4e:  //PgDw
           case 0x61:  //Numpad 9
-            rt4k_cycleQuickTabsIncrease();
+            tink_cycleQuickTabsIncrease();
             break;
 
           case 0x31:  //Slash '/'
           case 0x48:  //Break
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DIAG));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_DIAG));
             break;
 
           case 0x35:  //`
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_PROF));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_PROF));
             break;
 
           ///////////////////////////////////////////////////////
           // navigations
           case 0x29:  //ESC
           case 0x53:  //Numlock
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_BACK));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_BACK));
             break;
 
           case 0x28: //Enter
           case 0x58: //Numpad enter
           case 0x5d: //Numpad 5
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_OK));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_OK));
             break;
 
           case 0x4f: //Arrow Right
           case 0x5e: //Numpad 6
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_RIGHT));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_RIGHT));
             break;
 
           case 0x50: //Arrow Left
           case 0x5c: //Numpad 4
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_LEFT));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_LEFT));
             break;
 
           case 0x51: //Arrow Down
           case 0x5a: //Numpad 2
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DOWN));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_DOWN));
             break;
 
           case 0x52: //Arrow Up
           case 0x60: //Numpad 8
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_UP));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_UP));
             break;
 
           ///////////////////////////////////////////////////////
           // Quick Profile button 1 to 12
           // Map to F1 to F12
           case 0x3a:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_1));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_1));
             break;
           case 0x3b:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_2));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_2));
             break;
           case 0x3c:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_3));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_3));
             break;
           case 0x3d:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_4));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_4));
             break;
           case 0x3e:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_5));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_5));
             break;
           case 0x3f:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_6));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_6));
             break;
           case 0x40:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_7));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_7));
             break;
           case 0x41:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_8));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_8));
             break;
           case 0x42:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_9));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_9));
             break;
           case 0x43:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_10));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_10));
             break;
           case 0x44:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_11));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_11));
             break;
           case 0x45:
-            rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_12));
+            tink_remoteButtonSingle(String(TINK_IR_REMOTE_12));
             break;
 
           ///////////////////////////////////////////////////////
@@ -1149,9 +1188,9 @@ static void routine_keyboard()
           ///////////////////////////////////////////////////////
           // Setup mode
           case 0x49: //Ins - Enter setup mode if there is an active input
-            if (NO_INPUT != currentInput)
+            if (NO_INPUT != gswCurrentInput)
             {
-              setupModeInput = currentInput;
+              setupModeInput = gswCurrentInput;
               currentActiveControl = CONTROLLER_KEYBOARD;
               enterSetupMode();
             }
@@ -1161,7 +1200,7 @@ static void routine_keyboard()
         // if real input change is requested, write input right now
         if ((temporaryInput >= INPUT_LOWEST ) && (temporaryInput <= INPUT_HIGHEST))
         {
-          pico_setNewInput(temporaryInput);
+          pico_setNewGswInput(temporaryInput);
           //if currently in AUTO mode, transition to manual mode
           if (GSW_MODE_AUTO == pico_getGswMode())
           {
@@ -1229,22 +1268,22 @@ static void routine_keyboard()
             //only directions are repeateable
             case 0x4f: //Arrow Right
             case 0x5e: //Numpad Right
-              rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_RIGHT));
+              tink_remoteButtonSingle(String(TINK_IR_REMOTE_RIGHT));
               break;
 
             case 0x50: //Arrow Left
             case 0x5c: //Numpad Left
-              rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_LEFT));
+              tink_remoteButtonSingle(String(TINK_IR_REMOTE_LEFT));
               break;
 
             case 0x51: //Arrow Down
             case 0x5a: //Numpad Down
-              rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_DOWN));
+              tink_remoteButtonSingle(String(TINK_IR_REMOTE_DOWN));
               break;
 
             case 0x52: //Arrow Up
             case 0x60: //Numpad Up
-              rt4k_remoteButtonSingle(String(RT4K_IR_REMOTE_UP));
+              tink_remoteButtonSingle(String(TINK_IR_REMOTE_UP));
               break;
           }
         } else if (JSMARTSW_SETUP_MODE == mainProgramMode)
@@ -1367,8 +1406,8 @@ static bool isThereHardwareActivity()
   return (keypad_isThereButtonActivity() ||
           controller_isThereActivity()    ||
           screen_isThereActivity()        ||
-          rt4k_attemptingPowerAction()    ||
-          usb_isThereActivity()
+          tink_attemptingPowerAction()    ||
+          tink_isThereActivity()
           );
 }
 
@@ -1628,12 +1667,12 @@ static void picoLedInit()
 
 void pico_notifyControlInterfaceUsbc()
 {
-  screen_setCommandTextUpdate(inputText[RT4K_UART_PORT_TYPE_USBC], CONTROL_INTERFACE_DISPLAY_DURATION);
+  screen_setCommandTextUpdate(inputText[TINK_UART_PORT_TYPE_USBC], CONTROL_INTERFACE_DISPLAY_DURATION);
 }
 
 void pico_notifyControlInterfaceHd15()
 {
-  screen_setCommandTextUpdate(inputText[RT4K_UART_PORT_TYPE_HD15], CONTROL_INTERFACE_DISPLAY_DURATION);
+  screen_setCommandTextUpdate(inputText[TINK_UART_PORT_TYPE_HD15], CONTROL_INTERFACE_DISPLAY_DURATION);
 }
 
 ////////////////////////////////////////
@@ -1647,10 +1686,13 @@ void pico_mcuReboot()
 
   screen_rebootScreen();
 
+  rp2040.reboot();
+  /*
   //enable hardware watchdog
   watchdog_enable(10, true);
   //Wait for watchdog timeout and reboot
   while(1);
+  */
 }
 
 //Boot sequence check for stuck push buttons

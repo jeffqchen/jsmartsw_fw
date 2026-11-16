@@ -3,11 +3,13 @@
 #include "mydebug.h"
 #include "gsw_hardware.h"
 
+//#define FASTLED_RP2040_CLOCKLESS_PIO 1  //Potential fix for interrupt problem
+
 #include <FastLED.h>
 #include "colorutils.h"
 #include "rgbled.h"
 
-#include "rt4k.h"
+#include "tinkComm.h"
 #include "mypico.h"
 
 #ifdef DEBUG
@@ -37,7 +39,7 @@ static unsigned int rgbLedCurrentBrightness;
 
 static unsigned long rgbLedLastRefresh = 0;
 
-static int rgbLed_operationMode = JSMARTSW_NORMAL_MODE;
+static int rgbLed_gswOperationMode = JSMARTSW_NORMAL_MODE;
 
 static int scanAnimationPosition = 0;
 static float scanAnimationBlend = 0.0;
@@ -48,13 +50,7 @@ static CRGB scanAnimationLedArray[NUM_LEDS];
 static pulse_animation_parameters fastPulse = {ANIMATION_NO_BLEND, RGBLED_BLEND_STEP_FAST};
 static pulse_animation_parameters slowPulse = {ANIMATION_NO_BLEND, RGBLED_BLEND_STEP_SLOW};
 
-// currently impossible to know these states
-/*
-static bool rt4k_res_4k = false;
-static bool rt4k_res_1080p = false;
-static bool rt4k_hd15 = false;
-static bool rt4k_scart = false;
-*/
+static int tinkCurrentDevice, tinkCurrentInput, tinkCurrentOutputRes;
 
 /////////////// FUNCTION PROTOTYPES ////////////////
   ////////////////////////////////////////
@@ -107,7 +103,7 @@ void routine_rgbLedUpdate()
   if ((millis() - rgbLedLastRefresh) > RGBLED_FRAME_TIME)
   {
     //First of all, sync operation mode to main program
-    rgbLed_operationMode = pico_getMainProgramMode();
+    rgbLed_gswOperationMode = pico_getMainProgramMode();
 
     //////////////////////////////////////////////////
     // Brightness transition section
@@ -142,7 +138,7 @@ void routine_rgbLedUpdate()
     // End of brightness transition section
     //////////////////////////////////////////////////
 
-    if (JSMARTSW_NORMAL_MODE == rgbLed_operationMode)
+    if (JSMARTSW_NORMAL_MODE == rgbLed_gswOperationMode)
     {
       //keep running the scanning animation in the background
       normalMode_scanAnimation();
@@ -153,9 +149,10 @@ void routine_rgbLedUpdate()
       HSVHue newBgColor, newHighlightColor;
       unsigned int newHighlightSaturation;
       newBgColor = rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonBgManual;
-      unsigned int currentLedInput = pico_getCurrentInput();
+      unsigned int currentLedInput = pico_getCurrentGswInput();
 
-      if (false == pico_getGswMode())
+      //Animation LED #16 Auto mode
+      if (GSW_MODE_MANUAL == pico_getGswMode())
       { // Manual mode
         normalMode_scanAnimationReduceBlend(); //Keep reducing blend percentage for scan animation
         newHighlightColor = rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonActiveManual;   
@@ -198,21 +195,21 @@ void routine_rgbLedUpdate()
       }
       // End of Main color show
       //////////////////////////////////////////////////
-
       // mirror top to bottom row for better illumiation
+      //////////////////////////////////////////////////
       mirrorLedTopRowToBottomRow();
 
       // bottom row special colors go here
-      if (PICO_POWER_STATE_AWAKE == pico_getPowerState())//false == rgbLedSleeping)
+      // LED #10 TINK POWER
+      if (PICO_POWER_STATE_AWAKE == pico_getPowerState()) //false == rgbLedSleeping)
       {
         normalMode_drawLowerRowLed(newBgColor);
       }
-      
-    } else if (JSMARTSW_SETUP_MODE == rgbLed_operationMode)
+    } else if (JSMARTSW_SETUP_MODE == rgbLed_gswOperationMode)
     {
-      rgbLeds[RGBLED_INPUT_5] = rgbLeds[RGBLED_INPUT_HD15] = CHSV(HUE_YELLOW, 255, 0);
+      rgbLeds[RGBLED_INPUT_5] = rgbLeds[RGBLED_INPUT_PORT_HD15] = CHSV(HUE_YELLOW, 255, 0);
       
-      rgbLeds[RGBLED_INPUT_6] = rgbLeds[RGBLED_INPUT_SCART] = CHSV(rgbled_setupMode_colorScheme.hue_buttonYes, rgbled_setupMode_colorScheme.saturation_buttonYes, rgbLedCurrentBrightness);
+      rgbLeds[RGBLED_INPUT_6] = rgbLeds[RGBLED_INPUT_PORT_SCART] = CHSV(rgbled_setupMode_colorScheme.hue_buttonYes, rgbled_setupMode_colorScheme.saturation_buttonYes, rgbLedCurrentBrightness);
       rgbLeds[RGBLED_INPUT_7] = rgbLeds[RGBLED_DIMMER] = CHSV(rgbled_setupMode_colorScheme.hue_buttonNo, rgbled_setupMode_colorScheme.saturation_buttonNo, rgbLedCurrentBrightness);
       rgbLeds[RGBLED_INPUT_8] = rgbLeds[RGBLED_AUTO] = CHSV(rgbled_setupMode_colorScheme.hue_buttonClr, rgbled_setupMode_colorScheme.saturation_buttonClr, rgbLedCurrentBrightness);
 
@@ -240,11 +237,11 @@ static void normalMode_drawLowerRowLed(HSVHue currentBgColor)
     RGBLED_INPUT_7,
     RGBLED_INPUT_8,
     RGBLED_SHIFT,
-    RGBLED_RT4K_PWR,
+    RGBLED_TINK_PWR,
     RGBLED_RES_4K,
     RGBLED_RES_1080P,
-    RGBLED_INPUT_HD15,
-    RGBLED_INPUT_SCART,
+    RGBLED_INPUT_PORT_HD15,
+    RGBLED_INPUT_PORT_SCART,
     RGBLED_DIMMER,
     RGBLED_AUTO,
   */
@@ -252,27 +249,27 @@ static void normalMode_drawLowerRowLed(HSVHue currentBgColor)
   fastPulse = pulseAnimation(fastPulse);
   slowPulse = pulseAnimation(slowPulse);
 
-  //shift button special coloring
+  //LED #9 shift button special coloring
   if (true == pico_isKeypadShiftOn())
   {
     rgbLeds[RGBLED_SHIFT] = CHSV(rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_shiftOn, rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_shiftOn, rgbLedCurrentBrightness);
   }
 
-  //RT4K Power Action Animation (Fast)
-  if (true == rt4k_attemptingPowerAction())
+  ////LED #10 RT4K Power Action Animation (Fast)
+  if (true == tink_attemptingPowerAction())
   { //power transition animation
     float targetBrightness = 0.0f;
 
-    unsigned int tempRt4kConnection = rt4k_getConnection();
-    if (RT4K_UART_PORT_TYPE_USBC == tempRt4kConnection)
+    unsigned int tempRt4kConnection = tink_getConnection();
+    if (TINK_UART_PORT_TYPE_USBC == tempRt4kConnection)
     { // usb-c flash fast
       targetBrightness = rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow(fastPulse.percentage, 2.0f));
-    } else if (RT4K_UART_PORT_TYPE_HD15 == tempRt4kConnection)
+    } else if (TINK_UART_PORT_TYPE_HD15 == tempRt4kConnection)
     { // hd15 flash black fast
       targetBrightness = 0.0f;
     }
 
-    rgbLeds[RGBLED_RT4K_PWR] =  CHSV( currentBgColor  ,
+    rgbLeds[RGBLED_TINK_PWR] =  CHSV( currentBgColor  ,
                                       rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonBg,
                                       rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow( (ANIMATION_FULL_BLEND - fastPulse.percentage), 2.0f) ) 
                                     ) +
@@ -282,10 +279,10 @@ static void normalMode_drawLowerRowLed(HSVHue currentBgColor)
                                     );
   } else {
     //RT4K power state LED lighting (slow animation or solid)
-    switch(rt4k_getPowerState())
+    switch(tink_getPowerState())
     {
-      case RT4K_ON:   //slow blink of ON color
-        rgbLeds[RGBLED_RT4K_PWR] =  CHSV( currentBgColor  ,
+      case TINK_POWER_ON:   //slow blink of ON color
+        rgbLeds[RGBLED_TINK_PWR] =  CHSV( currentBgColor  ,
                                           rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonBg,
                                           rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow( (ANIMATION_FULL_BLEND - slowPulse.percentage), 2.0f ) ) 
                                         ) +
@@ -294,8 +291,8 @@ static void normalMode_drawLowerRowLed(HSVHue currentBgColor)
                                           rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow(slowPulse.percentage, 2.0f) ) 
                                         );
         break;
-      case RT4K_OFF:  //slow blink of OFF color
-        rgbLeds[RGBLED_RT4K_PWR] =  CHSV( currentBgColor  ,
+      case TINK_POWER_OFF:  //slow blink of OFF color
+        rgbLeds[RGBLED_TINK_PWR] =  CHSV( currentBgColor  ,
                                           rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonBg,
                                           rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow( (ANIMATION_FULL_BLEND - slowPulse.percentage), 2.0f ) ) 
                                         ) +
@@ -304,13 +301,50 @@ static void normalMode_drawLowerRowLed(HSVHue currentBgColor)
                                           rgbLedCurrentBrightness * (ANIMATION_FULL_BLEND - pow(slowPulse.percentage, 2.0f) ) 
                                         );
         break;
-      case RT4K_UNKNOWN:  //solid bg color so you can't see
+      case TINK_POWER_UNKNOWN:  //solid bg color so you can't see
         break;
     }
   }
 
-  //Auto mode indicator
-  if (GSW_MODE_AUTO == pico_getGswMode())//(true == rt4k_auto)
+  tinkCurrentDevice = tink_getCurrentDevice();
+  tinkCurrentInput = tink_getCurrentInputPort();
+  tinkCurrentOutputRes = tink_getCurrentOutputRes();
+
+  //LED #11 RES - 4K
+  if ( TINK_OUTPUT_STOCK_RES_2160P60 == tinkCurrentOutputRes ||
+      (TINK_OUTPUT_STOCK_RES_1440P60 == tinkCurrentOutputRes && (RT6X_Pro == tinkCurrentDevice || RT6X_CE == tinkCurrentDevice))  )
+  {
+    rgbLeds[RGBLED_RES_4K] = CHSV(  rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonActiveAuto,
+                                    rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonActiveAuto,
+                                    rgbLedCurrentBrightness);
+  }
+  
+  //LED #12 RES - 1080P
+  if (TINK_OUTPUT_STOCK_RES_1080P60 == tinkCurrentOutputRes)
+  {
+    rgbLeds[RGBLED_RES_1080P] = CHSV( rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonActiveAuto,
+                                      rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonActiveAuto,
+                                      rgbLedCurrentBrightness);
+  }
+
+  //LED #13 INPUT - HD15
+  if (TINK_INPUT_HD15_RGBS == tinkCurrentInput)
+  {
+    rgbLeds[RGBLED_INPUT_PORT_HD15] = CHSV( rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonActiveAuto,
+                                            rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonActiveAuto,
+                                            rgbLedCurrentBrightness);
+  }
+
+  //LED #14 INPUT - SCART
+  if (TINK_INPUT_SCART_RGBS == tinkCurrentInput) 
+  {
+    rgbLeds[RGBLED_INPUT_PORT_SCART] = CHSV(rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].hue_buttonActiveAuto,
+                                            rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonActiveAuto,
+                                            rgbLedCurrentBrightness);
+  }
+
+  //LED #16 Auto mode indicator
+  if (GSW_MODE_AUTO == pico_getGswMode())//(true == tink_auto)
   {
     rgbLeds[RGBLED_AUTO] =  CHSV( currentBgColor        ,
                                   rgbLed_normalMode_colorScheme[rgbledColorSchemeIndex].saturation_buttonBg,
@@ -414,7 +448,7 @@ static void setupMode_directionButtonsAnimation()
   static int sign = 1;
 
   rgbLeds[RGBLED_INPUT_1] = rgbLeds[RGBLED_SHIFT]     = CHSV(rgbled_setupMode_colorScheme.hue_buttonLeftRight, rgbled_setupMode_colorScheme.saturation_buttonLeftRight, leftRightBrightnessPercentage * rgbLedCurrentBrightness);
-  rgbLeds[RGBLED_INPUT_2] = rgbLeds[RGBLED_RT4K_PWR]  = CHSV(rgbled_setupMode_colorScheme.hue_buttonLeftRight, rgbled_setupMode_colorScheme.saturation_buttonLeftRight, (1.0f - leftRightBrightnessPercentage) * rgbLedCurrentBrightness);
+  rgbLeds[RGBLED_INPUT_2] = rgbLeds[RGBLED_TINK_PWR]  = CHSV(rgbled_setupMode_colorScheme.hue_buttonLeftRight, rgbled_setupMode_colorScheme.saturation_buttonLeftRight, (1.0f - leftRightBrightnessPercentage) * rgbLedCurrentBrightness);
   
   leftRightBrightnessPercentage += sign * SETUPMODE_ANIMATION_BRIGHTNESS_LEFTRIGHT_STEP;
 

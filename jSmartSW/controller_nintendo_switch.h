@@ -3,7 +3,8 @@
 #include "mydebug.h"
 
 #include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
+
 #include "nintendo_swcon_lib.h"
 
 #ifndef CONTROLLER_NINTENDO_SWITCH_H
@@ -28,7 +29,7 @@ enum {
 //function prototype
 
 //API
-void switchJoyCon_mount(uint8_t, uint8_t);
+bool switchJoyCon_mount(uint8_t, uint8_t);
 void switchJoyCon_umount(uint8_t, uint8_t);
 
 void switchJoyCon_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -41,3 +42,5 @@ void switchJoyCon_setupTick  (holding_left_right, uint8_t, uint8_t);
 void switchJoyCon_visualTick  (holding_left_right, uint8_t, uint8_t);
 void switchJoyCon_tactileTick(holding_left_right, uint8_t, uint8_t);
 void switchJoyCon_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void switchJoyCon_housekeepingRoutine ();

@@ -2,7 +2,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include <Arduino.h>
 
 #include "nintendo_swcon_lib.h"

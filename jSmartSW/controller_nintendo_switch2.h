@@ -14,7 +14,7 @@ https://gist.github.com/shinyquagsire23/66f006b46c56216acbaac6c1e2279b64
 
 #include "mydebug.h"
 
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_NINTENDO_SWITCH2_H
 #define CONTROLLER_NINTENDO_SWITCH2_H
@@ -50,6 +50,7 @@ enum {
 #define SW2_DEV_INSTANCE_UNDEFINED  255
 
 // Endpoint
+#define SW2_ENDPOINT_ADDR_IN        0x82
 #define SW2_ENDPOINT_ADDR_OUTPUT    0x2
 #define SW2_CMD_INITIAL_DELAY       1
 #define SW2_CMD_INTERVAL            23
@@ -77,9 +78,15 @@ enum {
 
 #define SW2_CMD_CATEGORY_CONNECTION       0x03
 
+  #define SW2_SUBCMD_ENABLE_IMU           0x0a
+
   #define SW2_SUBCMD_TOGGLE_HID           0x0d
     #define SW2_SUBCMD_TOGGLE_HID_ENABLE    0x0001
     #define SW2_SUBCMD_TOGGLE_HID_DISABLE   0x0002
+
+#define SW2_CMD_CATEGORY_EXTRA_FEATURES   0x08
+  #define SW2_SUBCMD_ENABLE_JOYCON_G_BUTTONS     0x02
+    #define SW2_JOYCON_G_BUTTONS_ENABLE   0x01
 
 #define SW2_CMD_CATEGORY_LED        0x09
 
@@ -253,10 +260,11 @@ typedef struct TU_ATTR_PACKED
   uint8_t   responseType;   // (???) 00 USB, 0x10 BTLE
   uint16_t  argumentSize;
   uint8_t   dataSize;
+
   uint8_t   argumentData[];
 } nintendo_switch2_joycon_output_report;
 
-#define MAC_ADDR_NUM_OF_BYTES           6
+#define MAC_ADDR_NUM_OF_BYTES   6
 
 struct TU_ATTR_PACKED nintendo_switch2_cmd_data_toggle_hid
 {
@@ -266,60 +274,85 @@ struct TU_ATTR_PACKED nintendo_switch2_cmd_data_toggle_hid
   nintendo_switch2_cmd_data_toggle_hid()
   {
     argument = 0;
-    for (int i = 0; i < MAC_ADDR_NUM_OF_BYTES; i++)
-    {
-      macAddr[i] = 0xff;
-    }
+    
+    memset(macAddr, 0xff, MAC_ADDR_NUM_OF_BYTES);
   }
 };
 
 struct TU_ATTR_PACKED nintendo_switch2_cmd_data_player_led
-{
-  #define PLAYERLED_PADDING  3
+{  
   uint8_t player_led_data;
+
+  #define PLAYERLED_PADDING   3
   uint8_t unknown[PLAYERLED_PADDING];
 
   nintendo_switch2_cmd_data_player_led()
   {
     player_led_data = 0;
-    for (int i = 0; i < PLAYERLED_PADDING; i++)
-    {
-      unknown[i] = 0;
-    }
+
+    memset(unknown, 0, PLAYERLED_PADDING);
   }
 };
 
 struct TU_ATTR_PACKED nintendo_switch2_cmd_data_simple_vibration
 {
-  #define VIBRATION_PADDING 3
-
   uint8_t vibrationId;
+
+  #define VIBRATION_PADDING   3
   uint8_t unknown[VIBRATION_PADDING];
 
+  
   nintendo_switch2_cmd_data_simple_vibration()
   {
     vibrationId = SW2_VIBRATION_PROJOY_OFF;
-    for (int i = 0; i < VIBRATION_PADDING; i++)
-    {
-      unknown[i] = 0;
-    }
+
+    memset(unknown, 0, VIBRATION_PADDING);
   }
+  
 };
 
 struct TU_ATTR_PACKED nintendo_switch2_cmd_data_enable_full_mode
 {
-  #define FULLMODE_PADDING 3
-
   uint8_t featureMask;
+
+  #define FULLMODE_PADDING    3
   uint8_t unknown[FULLMODE_PADDING];
 
   nintendo_switch2_cmd_data_enable_full_mode()
   {
     featureMask = 0;
-    for (int i = 0; i < FULLMODE_PADDING; i++)
-    {
-      unknown[i] = 0;
-    }
+
+    memset(unknown, 0, FULLMODE_PADDING);
+  }
+};
+
+struct TU_ATTR_PACKED nintendo_switch2_cmd_data_enable_imu
+{
+  uint8_t controllerId;
+
+  #define ENABLEIMU_PADDING   3
+  uint8_t unknown[ENABLEIMU_PADDING];
+
+  nintendo_switch2_cmd_data_enable_imu()
+  {
+    controllerId = 0;
+
+    memset(unknown, 0, ENABLEIMU_PADDING);
+  }
+};
+
+struct TU_ATTR_PACKED nintendo_switch2_cmd_data_enable_joycon_g_buttons
+{
+  uint8_t toggle;
+
+  #define ENABLE_JOYCON_G_PADDING   3
+  uint8_t unknown[ENABLE_JOYCON_G_PADDING];
+
+  nintendo_switch2_cmd_data_enable_joycon_g_buttons()
+  {
+    toggle = 0;
+
+    memset(unknown, 0, ENABLE_JOYCON_G_PADDING);
   }
 };
 
@@ -333,9 +366,13 @@ struct switch2Controller_init_state
   bool fullInputMode;
   bool playerLedSet;
   bool connectJinglePlayed;
+  bool imuEnabled;
+  bool gBttnsEnabled;
+
+  bool testCmd;
 
   switch2Controller_init_state () {
-    fullInputMode = playerLedSet = connectJinglePlayed = false;
+    fullInputMode = playerLedSet = connectJinglePlayed = imuEnabled = gBttnsEnabled = testCmd = false;
   }
 };
 
@@ -366,15 +403,11 @@ struct switch2Controller_instance
     dev_instance  = SW2_DEV_INSTANCE_UNDEFINED;
     present       = false;
     reportUpdated = false;
-    mountTime = millis();
-
-    for (int i = 0; i < MAC_ADDR_NUM_OF_BYTES; i++)
-    {
-      macAddrLE[i] = 0;
-    }
     chargeLevel = 0;
     isCharging = false;
 
+    memset(macAddrLE, 0, MAC_ADDR_NUM_OF_BYTES);
+    mountTime = millis();
     initState = switch2Controller_init_state();
     
     playerLedData = 0;
@@ -386,7 +419,7 @@ struct switch2Controller_instance
 //function prototype
 //bool is_sony_ds3(uint8_t);
 
-void sw2Con_mount(uint8_t, uint8_t);
+bool sw2Con_mount(uint8_t, uint8_t);
 void sw2Con_umount(uint8_t, uint8_t);
 
 void sw2Con_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -400,3 +433,5 @@ void sw2Con_setupTick    (holding_left_right, uint8_t, uint8_t);
 void sw2Con_visualTick   (holding_left_right, uint8_t, uint8_t);
 void sw2Con_tactileTick  (holding_left_right, uint8_t, uint8_t);
 void sw2Con_executeTick  (holding_left_right, uint8_t, uint8_t);
+
+void sw2Con_housekeepingRoutine ();

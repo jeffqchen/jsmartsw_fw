@@ -1,7 +1,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_SONY_DUALSENSE_H
 #define CONTROLLER_SONY_DUALSENSE_H
@@ -182,7 +182,7 @@ TU_ATTR_BIT_FIELD_ORDER_END
 void dualSense_defaultLedRumbleState();
 void process_sony_dualSense (uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void dualSense_mount(uint8_t, uint8_t);
+bool dualSense_mount(uint8_t, uint8_t);
 void dualSense_umount(uint8_t, uint8_t);
 
 void dualSense_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -195,3 +195,5 @@ void dualSense_setupTick  (holding_left_right, uint8_t, uint8_t);
 void dualSense_visualTick  (holding_left_right, uint8_t, uint8_t);
 void dualSense_tactileTick(holding_left_right, uint8_t, uint8_t);
 void dualSense_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void dualSense_housekeeping();

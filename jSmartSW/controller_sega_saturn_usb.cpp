@@ -4,7 +4,7 @@
 //#include "tusb.h"
 
 #include "controller_sega_saturn_usb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -22,7 +22,8 @@ controller_api_interface saturn_usb_api = { &saturn_usb_mount,
                                             &saturn_usb_setupTick,
                                             &saturn_usb_visualTick,
                                             &saturn_usb_tactileTick,
-                                            &saturn_usb_executeTick
+                                            &saturn_usb_executeTick,
+                                            &saturn_housekeepingRoutine
                                           };
 
 static uint8_t registeredDaddr = 0;
@@ -42,9 +43,9 @@ bool saturn_usb_is_hardware(uint8_t dev_addr)
 
 bool saturn_usb_is_registeredInstance(uint8_t dev_addr, uint8_t instance)
 {
-  return (  saturn_usb_is_hardware(dev_addr)       &&
-            dev_addr == registeredDaddr     &&
-            instance == registeredInstance  &&
+  return (  saturn_usb_is_hardware(dev_addr)  &&
+            dev_addr == registeredDaddr       &&
+            instance == registeredInstance    &&
             deviceMounted                   );
 }
 
@@ -93,11 +94,8 @@ void process_saturn_usb(uint8_t const* report, uint16_t len, uint8_t dev_addr, u
   immediateControllerData.button_home   |= saturn_usb_input_report.button_start;
 
   // shoulder buttons
-  immediateControllerData.button_l1 |= saturn_usb_input_report.button_l;
-  immediateControllerData.button_r1 |= saturn_usb_input_report.button_r;
-
-  //immediateControllerData.button_l2 |= ;
-  //immediateControllerData.button_r2 |= ;
+  immediateControllerData.button_l1 |= immediateControllerData.button_l2 |= saturn_usb_input_report.button_l;
+  immediateControllerData.button_r1 |= immediateControllerData.button_r2 |= saturn_usb_input_report.button_r;
 
   //analog stick buttons
   immediateControllerData.button_l3 |= saturn_usb_input_report.button_c;
@@ -110,7 +108,7 @@ void process_saturn_usb(uint8_t const* report, uint16_t len, uint8_t dev_addr, u
 ////////////////////////////////////////////////////
 //API functions
 
-void saturn_usb_mount(uint8_t dev_addr, uint8_t instance)
+bool saturn_usb_mount(uint8_t dev_addr, uint8_t instance)
 {
   // Saturn USB Init
   if ( saturn_usb_is_hardware(dev_addr) )
@@ -138,7 +136,11 @@ void saturn_usb_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[SaturnUSB] Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void saturn_usb_umount(uint8_t dev_addr, uint8_t instance)
@@ -172,20 +174,10 @@ bool saturn_usb_has_activity()
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void saturn_usb_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void saturn_usb_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void saturn_usb_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void saturn_usb_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void saturn_usb_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void saturn_usb_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
+void saturn_usb_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void saturn_usb_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void saturn_usb_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void saturn_usb_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void saturn_usb_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void saturn_usb_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void saturn_housekeepingRoutine() {}

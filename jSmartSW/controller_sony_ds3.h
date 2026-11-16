@@ -1,7 +1,7 @@
 #include "mydebug.h"
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_SONY_DS3_H
 #define CONTROLLER_SONY_DS3_H
@@ -144,7 +144,7 @@ typedef struct TU_ATTR_PACKED {
 void ds3_defaultLedRumbleState();
 void process_sony_ds3(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void ds3_mount(uint8_t, uint8_t);
+bool ds3_mount(uint8_t, uint8_t);
 void ds3_umount(uint8_t, uint8_t);
 
 void ds3_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -157,3 +157,5 @@ void ds3_setupTick  (holding_left_right, uint8_t, uint8_t);
 void ds3_visualTick  (holding_left_right, uint8_t, uint8_t);
 void ds3_tactileTick(holding_left_right, uint8_t, uint8_t);
 void ds3_executeTick (holding_left_right, uint8_t, uint8_t);
+
+void ds3_housekeepingRoutine();

@@ -5,7 +5,7 @@ https://github.com/jeffqchen/Genesis-2X-Controller-to-USB-Adapter
 */
 
 //#include "tusb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 
 #ifndef CONTROLLER_SEGA_md2x_H
 #define CONTROLLER_SEGA_md2x_H
@@ -54,7 +54,7 @@ typedef struct
 //bool is_md2x(uint8_t);
 void process_md2x(uint8_t const*, uint16_t, uint8_t, uint8_t);
 
-void md2x_mount(uint8_t, uint8_t);
+bool md2x_mount(uint8_t, uint8_t);
 void md2x_umount(uint8_t, uint8_t);
 
 void md2x_hid_set_report_complete(uint8_t, uint8_t, uint8_t, uint8_t, uint16_t);
@@ -68,3 +68,4 @@ void md2x_setupTick  (holding_left_right, uint8_t, uint8_t);
 void md2x_visualTick  (holding_left_right, uint8_t, uint8_t);
 void md2x_tactileTick(holding_left_right, uint8_t, uint8_t);
 void md2x_executeTick (holding_left_right, uint8_t, uint8_t);
+void md2x_housekeepingRoutine();

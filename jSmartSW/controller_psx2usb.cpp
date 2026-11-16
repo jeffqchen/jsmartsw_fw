@@ -4,7 +4,7 @@
 
 #include "mypico.h"
 #include "controller_psx2usb.h"
-#include "usb_controller.h"
+#include "usb_hid.h"
 #include "supported_controllers.h"
 
 #ifdef DEBUG
@@ -22,7 +22,8 @@ controller_api_interface psx2usb_api = {  &psx2usb_mount,
                                           &psx2usb_setupTick,
                                           &psx2usb_visualTick,
                                           &psx2usb_tactileTick,
-                                          &psx2usb_executeTick
+                                          &psx2usb_executeTick,
+                                          &psx2usb_housekeepingRoutine
                                         };
 
 static uint8_t registeredDaddr = 0;
@@ -108,7 +109,7 @@ void process_psx2usb(uint8_t const* report, uint16_t len, uint8_t dev_addr, uint
 ////////////////////////////////////////////////////
 //API functions
 
-void psx2usb_mount(uint8_t dev_addr, uint8_t instance)
+bool psx2usb_mount(uint8_t dev_addr, uint8_t instance)
 {
   // psx2usb USB Init
   if ( psx2usb_is_hardware(dev_addr) )
@@ -136,7 +137,11 @@ void psx2usb_mount(uint8_t dev_addr, uint8_t instance)
         debugPort->println("[PSX2USB] Can receive report!");
       #endif
     }
+
+    return true;
   }
+
+  return false;
 }
 
 void psx2usb_umount(uint8_t dev_addr, uint8_t instance)
@@ -170,20 +175,10 @@ bool psx2usb_has_activity()
 ////////////////////////////////////////////////////
 // Not implemented api functions
 
-void psx2usb_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void psx2usb_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len)
-{}
-
-void psx2usb_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void psx2usb_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void psx2usb_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
-
-void psx2usb_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance)
-{}
+void psx2usb_hid_set_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void psx2usb_hid_get_report_complete(uint8_t dev_addr, uint8_t instance, uint8_t report_id, uint8_t report_type, uint16_t len) {}
+void psx2usb_setupTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void psx2usb_visualTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void psx2usb_tactileTick(holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void psx2usb_executeTick (holding_left_right holdState, uint8_t dev_addr, uint8_t instance) {}
+void psx2usb_housekeepingRoutine() {}

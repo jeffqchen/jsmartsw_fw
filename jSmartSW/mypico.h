@@ -7,6 +7,14 @@
 #ifndef MYPICO_H
 #define MYPICO_H
 
+#ifdef DEBUG
+  #define PICO_DEBUG_SERIAL_PORT  Serial3
+  #define PICO_DEBUG_UART_TX 14
+  #define PICO_DEBUG_UART_RX 15
+  #define PICO_DEBUG_BAUD_RATE  115200
+  #define PICO_DEBUG_UART_CONFIG  SERIAL_8N1
+#endif
+
 #define PICO_LED_DELAY_AUTO   (unsigned long)1000
 #define PICO_LED_DELAY_MANUAL (unsigned long)250
 #define PICO_LED_DELAY_FAULTY (unsigned long)125
@@ -108,8 +116,8 @@ void pico_setMainProgramMode(int);
 int pico_getMainProgramMode();
 
 unsigned int pico_getGswMode();
-unsigned int pico_getCurrentInput();
-void pico_setNewInput(unsigned int);
+unsigned int pico_getCurrentGswInput();
+void pico_setNewGswInput(unsigned int);
 
 ////////////////////////////////////////
 // Control interface functions
